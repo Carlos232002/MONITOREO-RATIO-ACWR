@@ -5,8 +5,6 @@ import matplotlib.pyplot as plt
 import os
 import base64
 from datetime import date, timedelta, datetime
-from io import BytesIO
-from PIL import Image
 
 # --- 1. CONFIGURACIÓN Y LOGO ---
 st.set_page_config(page_title="Rendimiento ACWR", page_icon="🐯", layout="wide")
@@ -31,12 +29,10 @@ st.markdown(f"""
         background-image: {logo_style}; background-size: contain; background-repeat: no-repeat; background-position: center;
     }}
     .medal-box {{ 
-        background-color: #1c2128; 
-        padding: 15px; 
-        border-radius: 12px; 
-        border: 2px solid #30363d; 
-        text-align: center; 
-        margin-bottom: 25px;
+        background-color: #1c2128; padding: 15px; border-radius: 12px; border: 2px solid #30363d; text-align: center; margin-bottom: 25px;
+    }}
+    .safety-alert {{
+        background-color: #4b0000; border: 2px solid #ff0000; padding: 20px; border-radius: 10px; color: white; font-weight: bold; margin-bottom: 20px;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -67,18 +63,14 @@ def calcular_racha_y_medalla(df):
     fechas = sorted(fechas, reverse=True)
     racha = 0
     target = date.today()
-    
     if fechas and fechas[0] < target:
-        if fechas[0] == target - timedelta(days=1):
-            target = target - timedelta(days=1)
+        if fechas[0] == target - timedelta(days=1): target = target - timedelta(days=1)
         else: return 0, "Estás en racha", "🌱"
-
     for f in fechas:
         if f == target:
             racha += 1
             target -= timedelta(days=1)
         else: break
-        
     if racha >= 180: return racha, "LEYENDA DIAMANTE", "💎"
     if racha >= 90: return racha, "TIGRE DE ORO", "🥇"
     if racha >= 30: return racha, "ELITE DE PLATA", "🥈"
@@ -104,9 +96,7 @@ if check_password():
     USER, NAME, GROUPS, DB = st.session_state.user, st.session_state.name, st.session_state.groups, st.session_state.db
     COLUMNAS = ['Fecha','Tipo','Disciplina','Duracion','RPE','Carga','Sueno','Estres','Fatiga','Muscular','Animo','Notas','Foto']
     
-    if not os.path.exists(DB):
-        pd.DataFrame(columns=COLUMNAS).to_csv(DB, index=False)
-
+    if not os.path.exists(DB): pd.DataFrame(columns=COLUMNAS).to_csv(DB, index=False)
     df_actual = pd.read_csv(DB)
     racha_num, medalla_txt, icono = calcular_racha_y_medalla(df_actual)
     
@@ -127,14 +117,44 @@ if check_password():
             f_w = st.date_input("Fecha", value=date.today())
             s = st.slider("Calidad del Sueño", 1, 5, 3)
             e = st.slider("Nivel de Estrés", 1, 5, 3)
-            f = st.slider("Fatiga Percibida", 1, 5, 3)
-            m = st.slider("Dolor Muscular", 1, 5, 3)
-            a = st.slider("Estado de Ánimo", 1, 5, 3)
-            w_notas = st.text_area("🗒️ Anotaciones extra", placeholder="¿Por qué te sientes así hoy?")
+            fat = st.slider("Fatiga Percibida", 1, 5, 3)
+            musc = st.slider("Dolor Muscular/Articular (Escala EVA)", 1, 10, 1)
+            animo = st.slider("Estado de Ánimo", 1, 5, 3)
+            
+            detalle_dolor = ""
+            if musc > 2:
+                st.markdown("---")
+                st.subheader("📍 Localización de la dolencia")
+                tipo_t = st.radio("Tipo de tejido:", ["🟢 Muscular (Carga/Tibiales)", "🔴 Óseo-Articular (Rigidez/Hueso)"], horizontal=True)
+                
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    zona_sup = st.selectbox("Bloque Superior:", ["Noguna", "Cuello", "Hombros", "Pectoral", "Codos"])
+                with c2:
+                    zona_med = st.selectbox("Bloque Medio:", ["Ninguna", "Abdomen/Core", "Cadera/Pelvis", "Lumbar"])
+                with c3:
+                    zona_inf = st.selectbox("Bloque Inferior:", ["Ninguna", "Cuadriceps", "Isquios", "Glúteo", "Rodillas", "Tibias (Hueso)", "Tibiales (Músculo)", "Gemelos", "Tobillos", "Planta del Pie"])
+                
+                zonas_finales = [z for z in [zona_sup, zona_med, zona_inf] if z not in ["Ninguna", "Noguna"]]
+                detalle_dolor = f" | ZONA: {', '.join(zonas_finales)} ({tipo_t})"
+
+            w_notas_base = st.text_area("🗒️ Anotaciones extra", placeholder="¿Algún detalle más?")
+            
+            if musc >= 5:
+                st.markdown(f"""
+                <div class="safety-alert">
+                    🛑 PROTOCOLO DE SEGURIDAD ACTIVADO<br>
+                    Has registrado un dolor de {musc}/10. Por precaución, SE SUSPENDE tu actividad física hoy. 
+                    Informa a tu entrenador o entrenadora de inmediato.
+                </div>
+                """, unsafe_allow_html=True)
+
             if st.form_submit_button("Guardar Wellness ✅"):
                 df = pd.read_csv(DB)
                 df = df.drop(df[(df['Fecha'] == str(f_w)) & (df['Tipo'] == 'WELLNESS')].index)
-                nueva = pd.DataFrame([[str(f_w), 'WELLNESS', '-', 0, 0, 0, s, e, f, m, a, w_notas, '']], columns=COLUMNAS)
+                notas_completas = f"{w_notas_base} {detalle_dolor}".strip()
+                if musc >= 5: notas_completas = "[SUSPENDIDO] " + notas_completas
+                nueva = pd.DataFrame([[str(f_w), 'WELLNESS', '-', 0, 0, 0, s, e, fat, musc, animo, notas_completas, '']], columns=COLUMNAS)
                 pd.concat([df, nueva], ignore_index=True).to_csv(DB, index=False)
                 st.success("¡Datos guardados!")
                 st.rerun()
@@ -143,10 +163,10 @@ if check_password():
         st.header("🏃‍♂️ Registro de Actividad")
         with st.form("s_form"):
             f_s = st.date_input("Fecha", value=date.today())
-            dep = st.selectbox("Deporte/Actividad", ["Fútbol", "Baloncesto", "Tenis", "Pádel", "Balonmano", "Volleyball", "Badminton", "Tenis de Mesa", "Gimnasio", "Running", "Natación", "Ciclismo", "Otro"])
+            dep = st.selectbox("Actividad", ["Fútbol", "Gimnasio", "Running", "Natación", "Ciclismo", "Baloncesto", "Tenis", "Pádel", "Otro"])
             dur = st.number_input("Duración (minutos)", 1, 400, 60)
-            rpe = st.select_slider("RPE (1-10)", options=list(range(1,11)), value=5)
-            notas = st.text_area("📓 Diario", placeholder="Sensaciones de la sesión...")
+            rpe = st.select_slider("RPE (Esfuerzo 1-10)", options=list(range(1,11)), value=5)
+            notas = st.text_area("📓 Diario", placeholder="Sensaciones...")
             if st.form_submit_button("Guardar Registro ✅"):
                 df = pd.read_csv(DB)
                 nueva = pd.DataFrame([[str(f_s), 'ENTRENO', dep, dur, rpe, dur*rpe, 0, 0, 0, 0, 0, notas, '']], columns=COLUMNAS)
@@ -196,7 +216,6 @@ if check_password():
             c2.metric("Ratio ACWR", f"{acwr:.2f}")
             c3.metric("Carga Semanal", f"{int(aguda_serie.sum())}")
             
-            st.subheader("Gráfico Aguda vs Crónica")
             fig, ax = plt.subplots(figsize=(10, 4))
             ax.plot(aguda_serie.index, [aguda]*len(aguda_serie), color='red', linestyle='--', label="Aguda")
             ax.plot(cronica_serie.index, cronica_serie.values, color='cyan', alpha=0.5, label="Crónica")
@@ -220,54 +239,36 @@ if check_password():
             
             csv = df_filtrado.to_csv(index=False).encode('utf-8')
             st.download_button(label="📥 Descargar", data=csv, file_name=f'datos_{USER}.csv')
-            
-            with st.form("del_f"):
-                f_del = st.selectbox("Eliminar fecha:", sorted(df_filtrado['Fecha'].unique(), reverse=True))
-                conf = st.checkbox("Confirmar borrado")
-                if st.form_submit_button("Borrar Registro"):
-                    if conf:
-                        df[df['Fecha'] != f_del].to_csv(DB, index=False)
-                        st.rerun()
             st.dataframe(df_filtrado.sort_values(by="Fecha", ascending=False))
 
     elif menu == "📖 Guía de Ayuda":
-        st.header("📖 Guía de Interpretación de Datos")
+        st.header("📖 Guía de Rendimiento")
         
-        with st.expander("🏅 Sistema de Medallas (Tu Compromiso)", expanded=True):
+        with st.expander("🏅 Sistema de Medallas y Compromiso", expanded=True):
             st.write("""
-            **La disciplina y el compromiso diario son los pilares que sustentan tu rendimiento a largo plazo.** Este sistema premia tu rigor al registrar tus datos:
-            
-            | Medalla | Racha Requerida | Significado |
-            | :--- | :--- | :--- |
-            | 🍫 **Chocolate** | **7 Días** | ¡Buen comienzo! Has superado la barrera de la primera semana. |
-            | 🥉 **Bronce** | **14 Días** | Hábito creado. Empiezas a demostrar una constancia sólida. |
-            | 🥈 **Plata** | **30 Días** | Compromiso de Élite. Un mes entero sin fallar denota mentalidad profesional. |
-            | 🥇 **Oro** | **90 Días** | Disciplina de Tigre. Máximo nivel de rigor y seriedad con tu salud. |
-            | 💎 **Diamante** | **180 Días** | Leyenda del Club. Referente absoluto de compromiso para todo el grupo. |
-            
-            *⚠️ **Importante:** La racha se mantiene simplemente registrando el Wellness. Si olvidas registrar tus datos un día entero, el contador volverá a cero.*
+            **La disciplina y el compromiso diario son los pilares que sustentan tu rendimiento a largo plazo.**
+            * 🍫 **7 Días:** Mérito Chocolate.
+            * 🥉 **14 Días:** Constancia Bronce.
+            * 🥈 **30 Días:** Élite de Plata.
+            * 🥇 **90 Días:** Tigre de Oro.
+            * 💎 **180 Días:** Leyenda Diamante.
+            *⚠️ La racha se activa registrando el Wellness, entrenes o no.*
             """)
 
-        with st.expander("🌅 Cuestionario Wellness (Método Hooper)"):
+        with st.expander("🚨 Gestión de Molestias y Dolor (Escala EVA)"):
             st.write("""
-            El **Wellness** nos indica tu capacidad de recuperación basal. Evaluamos 5 parámetros de 1 a 5, donde **5 es el estado óptimo** y 1 el peor. Las notas ayudan al Coach a entender el contexto de tu fatiga o descanso.
-            """)
-            
-        with st.expander("📉 Monotonía (Variabilidad de la Carga)"):
-            st.write("""
-            Mide si tus cargas son muy similares día tras día. Una **monotonía alta conlleva riesgo de sobreentrenamiento o estancamiento**.
+            Tu salud es lo primero. Usamos la escala EVA (1-10) para monitorizar tu estado:
+            * **Dolor > 2:** Se habilitará el mapa para localizar la zona y el tipo de tejido.
+            * **🟢 Muscular:** Pesadez, sobrecarga o fatiga en el tejido blando (ej. Tibiales).
+            * **🔴 Óseo / Articular:** Pinchazos, dolor profundo o **rigidez articular** (ej. Tibias).
+            * **Nivel ≥ 5 (SUSPENSIÓN):** Protocolo de seguridad. No debes entrenar y debes contactar con **tu entrenador o entrenadora**.
             """)
 
-        with st.expander("⚖️ Ratio ACWR (Aguda vs Crónica)"):
+        with st.expander("📉 Monotonía y ACWR"):
             st.write("""
-            Compara tu carga de la última semana contra tu media del mes para asegurar una progresión segura.
-            
-            * **Zona de Desentrenamiento (< 0.8):** Estás entrenando considerablemente menos de lo habitual. Puede haber riesgo de pérdida de forma o lesiones al reincorporar carga bruscamente.
-            * **Punto Dulce (0.8 - 1.3):** Carga de entrenamiento óptima. Progresión segura y mejora del rendimiento.
-            * **Zona de Peligro (> 1.5):** Riesgo crítico de lesión por exceso de carga.
-            
-            **Sistema de Semáforos:**
-            * 🟢 **Verde (0.8 - 1.3):** Todo en orden. ¡Sigue así!
-            * 🟡 **Amarillo (1.3 - 1.5 o 0.5 - 0.8):** Precaución. Estamos en el límite del desentrenamiento o de la fatiga excesiva.
-            * 🔴 **Rojo (< 0.5 o > 1.5):** Alerta máxima. Riesgo muy elevado de lesión o desajuste total.
+            * **Monotonía:** Si es alta (> 2.0) indica riesgo de sobreentrenamiento o estancamiento por falta de variedad en la carga.
+            * **Ratio ACWR:** Compara tu última semana con el mes.
+                * **< 0.8:** Desentrenamiento / Descarga.
+                * **0.8 - 1.3:** Punto Dulce (Óptimo).
+                * **> 1.5:** Peligro de lesión.
             """)
