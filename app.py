@@ -31,9 +31,6 @@ st.markdown(f"""
     .medal-box {{ 
         background-color: #1c2128; padding: 15px; border-radius: 12px; border: 2px solid #30363d; text-align: center; margin-bottom: 25px;
     }}
-    .safety-alert {{
-        background-color: #4b0000; border: 2px solid #ff0000; padding: 20px; border-radius: 10px; color: white; font-weight: bold; margin-bottom: 20px;
-    }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -113,49 +110,20 @@ if check_password():
 
     if menu == "🌅 Wellness (Salud)":
         st.header("🌅 Cuestionario Wellness (Hooper)")
+        st.info("Recuerda: 1 es lo peor y 5 es el estado óptimo (máximo descanso).")
         with st.form("w_form"):
             f_w = st.date_input("Fecha", value=date.today())
             s = st.slider("Calidad del Sueño", 1, 5, 3)
             e = st.slider("Nivel de Estrés", 1, 5, 3)
             fat = st.slider("Fatiga Percibida", 1, 5, 3)
-            musc = st.slider("Dolor Muscular/Articular (Escala EVA)", 1, 10, 1)
+            musc = st.slider("Estado Muscular", 1, 5, 3)
             animo = st.slider("Estado de Ánimo", 1, 5, 3)
+            w_notas = st.text_area("🗒️ Anotaciones extra", placeholder="¿Algún detalle más?")
             
-            detalle_dolor = ""
-            if musc > 2:
-                st.markdown("---")
-                st.subheader("📍 Localización de la dolencia")
-                tipo_t = st.radio("Tipo de tejido:", ["🟢 Sobrecarga / Dolor Muscular", "🔴 Óseo-Articular (Rigidez / Hueso)"], horizontal=True)
-                
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    zona_sup = st.selectbox("Bloque Superior:", ["Ninguna", "Cuello", "Hombros", "Pectoral", "Codos"])
-                with c2:
-                    zona_med = st.selectbox("Bloque Medio:", ["Ninguna", "Abdomen/Core", "Cadera/Pelvis", "Lumbar"])
-                with c3:
-                    zona_inf = st.selectbox("Bloque Inferior:", ["Ninguna", "Cuadriceps", "Isquios", "Glúteo", "Rodillas", "Tibias (Hueso)", "Tibiales (Músculo)", "Gemelos", "Tobillos", "Planta del Pie"])
-                
-                zonas_finales = [z for z in [zona_sup, zona_med, zona_inf] if z != "Ninguna"]
-                detalle_dolor = f" | ZONA: {', '.join(zonas_finales)} ({tipo_t})"
-
-            w_notas_base = st.text_area("🗒️ Anotaciones extra", placeholder="¿Algún detalle más?")
-            
-            if musc >= 5:
-                st.markdown(f"""
-                <div class="safety-alert">
-                    🛑 PROTOCOLO DE SEGURIDAD ACTIVADO<br>
-                    Has registrado un dolor de {musc}/10 en la zona de {', '.join(zonas_finales) if detalle_dolor else 'zona no especificada'}.<br>
-                    Por precaución, SE SUSPENDE tu actividad física hoy. 
-                    Es obligatorio informar a tu entrenador o entrenadora de inmediato.
-                </div>
-                """, unsafe_allow_html=True)
-
             if st.form_submit_button("Guardar Wellness ✅"):
                 df = pd.read_csv(DB)
                 df = df.drop(df[(df['Fecha'] == str(f_w)) & (df['Tipo'] == 'WELLNESS')].index)
-                notas_completas = f"{w_notas_base} {detalle_dolor}".strip()
-                if musc >= 5: notas_completas = "[SUSPENDIDO] " + notas_completas
-                nueva = pd.DataFrame([[str(f_w), 'WELLNESS', '-', 0, 0, 0, s, e, fat, musc, animo, notas_completas, '']], columns=COLUMNAS)
+                nueva = pd.DataFrame([[str(f_w), 'WELLNESS', '-', 0, 0, 0, s, e, fat, musc, animo, w_notas, '']], columns=COLUMNAS)
                 pd.concat([df, nueva], ignore_index=True).to_csv(DB, index=False)
                 st.success("¡Datos guardados!")
                 st.rerun()
@@ -190,13 +158,9 @@ if check_password():
                             d['Fecha'] = pd.to_datetime(d['Fecha']).dt.date
                             d7 = d[d['Fecha'] >= hace_7]
                             c = d7['Carga'].sum()
-                            w_df = d7[d7['Tipo'] == 'WELLNESS'].copy()
-                            
-                            if not w_df.empty:
-                                # NORMALIZACIÓN: Dolor (1-10) / 2 para que pese igual que el resto (1-5)
-                                w_df['Musc_Norm'] = w_df['Muscular'] / 2
-                                well_final = w_df[['Sueno','Estres','Fatiga','Musc_Norm','Animo']].mean(axis=1).mean()
-                                res.append({"Atleta": info[1], "Carga": int(c), "Wellness": round(well_final,1)})
+                            w_df = d7[d7['Tipo'] == 'WELLNESS']
+                            well = w_df[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).mean() if not w_df.empty else 0
+                            res.append({"Atleta": info[1], "Carga": int(c), "Wellness": round(well,1)})
                     except: continue
             if res:
                 df_rank = pd.DataFrame(res).sort_values("Carga", ascending=False)
@@ -216,19 +180,10 @@ if check_password():
             acwr = aguda / cronica if cronica > 0 else 1.0
             mono = aguda_serie.mean() / aguda_serie.std() if aguda_serie.std() > 0 else 0
             
-            # Wellness normalizado para el KPI superior
-            w_pro = df[df['Tipo'] == 'WELLNESS'].copy()
-            well_score = "-"
-            if not w_pro.empty:
-                w_last = w_pro.iloc[-1]
-                m_norm = w_last['Muscular'] / 2
-                well_score = round((w_last[['Sueno','Estres','Fatiga','Animo']].mean() + m_norm) / 2, 1)
-
-            c1, c2, c3, c4 = st.columns(4)
+            c1, c2, c3 = st.columns(3)
             c1.metric("Monotonía", f"{mono:.2f}")
             c2.metric("Ratio ACWR", f"{acwr:.2f}")
-            c3.metric("Wellness (1-5)", f"{well_score}")
-            c4.metric("Carga Semanal", f"{int(aguda_serie.sum())}")
+            c3.metric("Carga Semanal", f"{int(aguda_serie.sum())}")
             
             fig, ax = plt.subplots(figsize=(10, 4))
             ax.plot(aguda_serie.index, [aguda]*len(aguda_serie), color='red', linestyle='--', label="Aguda")
@@ -269,21 +224,8 @@ if check_password():
             *⚠️ La racha se mantiene registrando el Wellness, entrenes o no.*
             """)
 
-        with st.expander("🚨 Gestión de Molestias y Dolor (Escala EVA)"):
+        with st.expander("🌅 Cuestionario Wellness (Escala 1-5)"):
             st.write("""
-            Tu salud es lo primero. Usamos la escala EVA (1-10) para monitorizar tu estado:
-            * **Dolor > 2:** Se habilitará el mapa para localizar la zona y el tipo de tejido.
-            * **🟢 Sobrecarga / Dolor Muscular:** Pesadez o fatiga en el tejido blando (ej. Tibiales, Cuádriceps).
-            * **🔴 Óseo / Articular:** Pinchazos, dolor profundo o **rigidez articular** (ej. Tibias, Rodilla).
-            * **Nivel ≥ 5 (SUSPENSIÓN):** Protocolo de seguridad. Has registrado un nivel compatible con riesgo de lesión. **No debes entrenar** y debes contactar con **tu entrenador o entrenadora** de inmediato.
-            """)
-
-        with st.expander("📉 Monotonía y ACWR (Análisis Avanzado)"):
-            st.write("""
-            * **Monotonía:** Mide la variabilidad de tu carga. Si es muy alta (> 2.0) indica que tus entrenamientos son demasiado similares día tras día, lo que aumenta el riesgo de **sobreentrenamiento o estancamiento**.
-            * **Ratio ACWR (Aguda vs Crónica):** Compara tu carga de la última semana contra tu media del mes para asegurar una progresión segura.
-                * **🟢 Verde (0.8 - 1.3):** Punto Dulce. Carga óptima y progresión segura.
-                * **🟡 Amarillo (1.3 - 1.5 o 0.5 - 0.8):** Zona de Precaución. Estás en el límite del desentrenamiento o de la fatiga excesiva.
-                * **🔴 Rojo (< 0.5 o > 1.5):** Alerta máxima. Riesgo muy elevado de lesión o desajuste total.
-                * **Zona de Desentrenamiento (< 0.8):** Entrenas considerablemente menos de lo habitual; riesgo de pérdida de forma o lesión al reincorporar carga bruscamente.
-            """)
+            Monitorizamos 5 variables clave de 1 a 5:
+            * **5:** Estado óptimo (Descansado, sin estrés, sueño profundo, sin dolor, animado).
+            * **1:** Estado crítico (Agotado, estrés máximo, insomnio, dolor limit
