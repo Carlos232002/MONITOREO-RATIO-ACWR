@@ -9,8 +9,11 @@ from io import BytesIO
 from PIL import Image
 
 # --- 1. CONFIGURACIÓN Y LOGO ---
-st.set_page_config(page_title="Rendimiento ACWR", page_icon="🐯", layout="wide")
-
+st.set_page_config(
+    page_title="My Performance Journal", 
+    page_icon="logo_app.png", 
+    layout="wide"
+)
 def get_base64_logo(path):
     if os.path.exists(path):
         with open(path, "rb") as f:
