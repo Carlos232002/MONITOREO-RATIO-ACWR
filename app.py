@@ -234,10 +234,10 @@ if check_password():
 
         with st.expander("📉 Monotonía y ACWR (Análisis Avanzado)"):
             st.write("""
-            * **Monotonía:** Mide la variabilidad de tu carga. Si es muy alta (> 2.0) indica que tus entrenamientos son demasiado similares día tras día, lo que aumenta el riesgo de sobreentrenamiento.
+            * **Monotonía:** Indica si tus cargas diarias son demasiado lineales. Una **monotonía alta (> 2.0)** no solo implica riesgo de sobreentrenamiento, sino también de **estancamiento**, ya que el cuerpo necesita variabilidad para generar nuevas adaptaciones.
             * **Ratio ACWR (Aguda vs Crónica):** Compara tu carga de la última semana contra tu media del mes.
-                * **🟢 Verde (0.8 - 1.3):** Punto Dulce. Carga óptima.
+                * **🟢 Verde (0.8 - 1.3):** Punto Dulce. Carga óptima y segura.
                 * **🟡 Amarillo (1.3 - 1.5):** Zona de Precaución.
-                * **🔴 Rojo (> 1.5):** Alerta máxima de lesión.
-                * **Zona de Desentrenamiento (< 0.8):** Carga insuficiente; riesgo de pérdida de forma o lesión al reincorporar carga bruscamente.
+                * **🔴 Rojo (> 1.5):** Alerta máxima de riesgo de lesión.
+                * **Zona de Desentrenamiento (< 0.8):** Carga insuficiente; riesgo de pérdida de forma física.
             """)
