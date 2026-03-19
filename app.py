@@ -90,12 +90,13 @@ if check_password():
                 pd.concat([df, nueva], ignore_index=True).to_csv(DB, index=False)
                 st.success("Wellness guardado correctamente.")
 
-    # --- 🏃‍♂️ REGISTRAR SESIÓN (CON DIARIO/NOTAS) ---
+    # --- 🏃‍♂️ REGISTRAR SESIÓN (CON MÁS DEPORTES) ---
     elif menu == "🏃‍♂️ Registrar Sesión":
         st.header("🏃‍♂️ Registro de Entrenamiento")
         with st.form("s_form"):
             f_s = st.date_input("Fecha", value=date.today())
-            dep = st.selectbox("Deporte", ["Tenis", "Fútbol", "Gimnasio", "Running", "Pádel", "Otro"])
+            # LISTA DE DEPORTES AMPLIADA:
+            dep = st.selectbox("Deporte", ["Fútbol", "Baloncesto", "Tenis", "Pádel", "Balonmano", "Volleyball", "Badminton", "Tenis de Mesa", "Gimnasio", "Running", "Natación", "Ciclismo", "Otro"])
             dur = st.number_input("Duración (minutos)", 1, 400, 60)
             rpe = st.select_slider("Esfuerzo Percibido (RPE 1-10)", options=list(range(1,11)), value=5)
             notas = st.text_area("📓 Diario de entrenamiento", placeholder="Sensaciones, molestias...")
@@ -166,7 +167,7 @@ if check_password():
             ax.legend()
             st.pyplot(fig)
 
-    # --- 📥 EXPORTAR DATOS (RECUPERADO) ---
+    # --- 📥 EXPORTAR DATOS ---
     elif menu == "📥 Exportar mis Datos":
         st.header("📥 Descargar Historial")
         df = pd.read_csv(DB)
