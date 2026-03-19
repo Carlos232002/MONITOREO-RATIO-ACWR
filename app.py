@@ -30,7 +30,14 @@ st.markdown(f"""
         content: ""; display: block; margin: 20px auto; width: 100px; height: 100px;
         background-image: {logo_style}; background-size: contain; background-repeat: no-repeat; background-position: center;
     }}
-    .medal-box {{ background-color: #1c2128; padding: 10px; border-radius: 10px; border: 1px solid #30363d; text-align: center; margin-bottom: 20px; }}
+    .medal-box {{ 
+        background-color: #1c2128; 
+        padding: 15px; 
+        border-radius: 12px; 
+        border: 2px solid #30363d; 
+        text-align: center; 
+        margin-bottom: 25px;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -55,18 +62,16 @@ USERS = {
 
 # --- 3. FUNCIONES DE APOYO (RACHA Y MEDALLAS) ---
 def calcular_racha_y_medalla(df):
-    if df.empty: return 0, "Sin Medalla", "⚪"
+    if df.empty: return 0, "Hábito en proceso", "🌱"
     fechas = pd.to_datetime(df['Fecha']).dt.date.unique()
     fechas = sorted(fechas, reverse=True)
     racha = 0
     target = date.today()
     
-    # Si hoy no ha registrado, comprobamos si ayer sí para no romper racha hasta que acabe el día
     if fechas and fechas[0] < target:
         if fechas[0] == target - timedelta(days=1):
             target = target - timedelta(days=1)
-        else:
-            return 0, "Hábito en proceso", "🌱"
+        else: return 0, "Hábito en proceso", "🌱"
 
     for f in fechas:
         if f == target:
@@ -109,15 +114,15 @@ if check_password():
     st.sidebar.markdown(f"### 👤 {NAME}")
     st.sidebar.markdown(f"""
     <div class="medal-box">
-        <h1 style='margin:0;'>{icono}</h1>
-        <small>{medalla_txt}</small><br>
-        <strong>🔥 {racha_num} días de racha</strong>
+        <h1 style='margin:0; font-size: 45px;'>{icono}</h1>
+        <p style='color: #1E90FF; font-weight: bold; margin: 5px 0;'>{medalla_txt}</p>
+        <span style='font-size: 14px;'>🔥 {racha_num} días seguidos</span>
     </div>
     """, unsafe_allow_html=True)
     
     menu = st.sidebar.radio("Navegación", ["🌅 Wellness (Salud)", "🏃‍♂️ Registrar Sesión", "🏆 Ranking del Grupo", "📊 Mi Análisis Pro", "📥 Exportar mis Datos", "📖 Guía de Ayuda"])
 
-    # --- 🌅 WELLNESS (CON NOTAS) ---
+    # --- 🌅 WELLNESS ---
     if menu == "🌅 Wellness (Salud)":
         st.header("🌅 Cuestionario Wellness (Hooper)")
         with st.form("w_form"):
@@ -127,13 +132,13 @@ if check_password():
             f = st.slider("Fatiga Percibida", 1, 5, 3)
             m = st.slider("Dolor Muscular", 1, 5, 3)
             a = st.slider("Estado de Ánimo", 1, 5, 3)
-            w_notas = st.text_area("🗒️ Anotaciones extra (¿Por qué te sientes así?)", placeholder="Ej: He dormido mal por el calor, o tengo molestias en el tobillo...")
+            w_notas = st.text_area("🗒️ Anotaciones extra", placeholder="¿Por qué te sientes así hoy?")
             if st.form_submit_button("Guardar Wellness ✅"):
                 df = pd.read_csv(DB)
                 df = df.drop(df[(df['Fecha'] == str(f_w)) & (df['Tipo'] == 'WELLNESS')].index)
                 nueva = pd.DataFrame([[str(f_w), 'WELLNESS', '-', 0, 0, 0, s, e, f, m, a, w_notas, '']], columns=COLUMNAS)
                 pd.concat([df, nueva], ignore_index=True).to_csv(DB, index=False)
-                st.success("Wellness guardado. ¡Sigue así!")
+                st.success("¡Datos guardados!")
                 st.rerun()
 
     # --- 🏃‍♂️ REGISTRAR SESIÓN ---
@@ -144,19 +149,19 @@ if check_password():
             dep = st.selectbox("Deporte", ["Fútbol", "Baloncesto", "Tenis", "Pádel", "Balonmano", "Volleyball", "Badminton", "Tenis de Mesa", "Gimnasio", "Running", "Natación", "Ciclismo", "Otro"])
             dur = st.number_input("Duración (minutos)", 1, 400, 60)
             rpe = st.select_slider("RPE (1-10)", options=list(range(1,11)), value=5)
-            notas = st.text_area("📓 Diario", placeholder="Sensaciones del entreno...")
+            notas = st.text_area("📓 Diario", placeholder="Sensaciones...")
             if st.form_submit_button("Guardar Sesión ✅"):
                 df = pd.read_csv(DB)
                 nueva = pd.DataFrame([[str(f_s), 'ENTRENO', dep, dur, rpe, dur*rpe, 0, 0, 0, 0, 0, notas, '']], columns=COLUMNAS)
                 pd.concat([df, nueva], ignore_index=True).to_csv(DB, index=False)
-                st.success("Sesión guardada.")
+                st.success("Sesión registrada.")
                 st.rerun()
 
     # --- 🏆 RANKING ---
     elif menu == "🏆 Ranking del Grupo":
         st.header("🏆 Clasificación")
         if GROUPS:
-            g_sel = st.selectbox("Ver Grupo:", GROUPS)
+            g_sel = st.selectbox("Grupo:", GROUPS)
             res = []
             hace_7 = date.today() - timedelta(days=7)
             for u, info in USERS.items():
@@ -175,7 +180,7 @@ if check_password():
             if res:
                 df_rank = pd.DataFrame(res).sort_values("Carga", ascending=False)
                 st.dataframe(df_rank.style.background_gradient(cmap='RdYlGn', subset=['Wellness'], vmin=1, vmax=5), use_container_width=True)
-        else: st.info("No perteneces a ningún grupo.")
+        else: st.info("No tienes grupos asignados.")
 
     # --- 📊 ANÁLISIS PRO ---
     elif menu == "📊 Mi Análisis Pro":
@@ -220,29 +225,38 @@ if check_password():
                 df_filtrado = df[df['Fecha'].apply(lambda x: x.strftime('%Y-%m')) == mes_sel]
             
             csv = df_filtrado.to_csv(index=False).encode('utf-8')
-            st.download_button(label="📥 Descargar Selección", data=csv, file_name=f'datos_{USER}.csv')
+            st.download_button(label="📥 Descargar", data=csv, file_name=f'datos_{USER}.csv')
             
             with st.form("del_f"):
-                f_del = st.selectbox("Borrar fecha:", sorted(df_filtrado['Fecha'].unique(), reverse=True))
+                f_del = st.selectbox("Eliminar fecha:", sorted(df_filtrado['Fecha'].unique(), reverse=True))
                 conf = st.checkbox("Confirmar borrado")
-                if st.form_submit_button("Eliminar"):
+                if st.form_submit_button("Borrar Registro"):
                     if conf:
                         df[df['Fecha'] != f_del].to_csv(DB, index=False)
                         st.rerun()
             st.dataframe(df_filtrado.sort_values(by="Fecha", ascending=False))
 
-    # --- 📖 GUÍA DE AYUDA ---
+    # --- 📖 GUÍA DE AYUDA (CON MEDALLAS DETALLADAS) ---
     elif menu == "📖 Guía de Ayuda":
         st.header("📖 Guía de Interpretación")
-        with st.expander("🏅 Sistema de Medallas y Racha", expanded=True):
+        
+        with st.expander("🏅 Sistema de Medallas (Compromiso)", expanded=True):
             st.write("""
-            La constancia es lo que te hará mejorar. La App premia tus días seguidos de registro:
-            * **7 días:** 🍫 Chocolate (¡Buen comienzo!)
-            * **14 días:** 🥉 Bronce (Hábito creado)
-            * **30 días:** 🥈 Plata (Compromiso de Élite)
-            * **90 días:** 🥇 Oro (Disciplina de Tigre)
-            * **180 días:** 💎 Diamante (Leyenda del Club)
-            *Nota: Si dejas de registrar un día completo, la racha vuelve a 0.*
+            Tu disciplina es clave para que el Coach pueda ayudarte. Estos son tus rangos según los días seguidos que registres:
+            
+            | Medalla | Racha Requerida | Significado |
+            | :--- | :--- | :--- |
+            | 🍫 **Chocolate** | **7 Días** | ¡Buen comienzo! Has superado la primera semana. |
+            | 🥉 **Bronce** | **14 Días** | Hábito creado. Ya eres constante. |
+            | 🥈 **Plata** | **30 Días** | Compromiso de Élite. Mentalidad profesional. |
+            | 🥇 **Oro** | **90 Días** | Disciplina de Tigre. Máximo nivel de rigor. |
+            | 💎 **Diamante** | **180 Días** | Leyenda del Club. Referente para el grupo. |
+            
+            *⚠️ **Aviso:** Si olvidas registrar tus datos un día entero, la racha volverá a cero.*
             """)
-        with st.expander("📉 Entender ACWR y Monotonía"):
-            st.write("Ratio ACWR Óptimo: 0.8 a 1.3. Monotonía Óptima: < 1.5.")
+
+        with st.expander("🌅 Cuestionario Wellness (Hooper)"):
+            st.write("Puntúa de 1 a 5. El 5 representa el estado óptimo. Las notas ayudan al Coach a entender tus números.")
+            
+        with st.expander("📉 ACWR y Monotonía"):
+            st.write("Ratio ACWR Óptimo: 0.8 a 1.3. Monotonía Óptima: < 1.5. Más de 2.0 indica peligro de lesión.")
