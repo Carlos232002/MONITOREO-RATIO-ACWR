@@ -140,18 +140,18 @@ if check_password():
                 st.rerun()
 
     elif menu == "🏃‍♂️ Registrar Sesión":
-        st.header("🏃‍♂️ Registro de Entrenamiento")
+        st.header("🏃‍♂️ Registro de Actividad")
         with st.form("s_form"):
             f_s = st.date_input("Fecha", value=date.today())
-            dep = st.selectbox("Deporte", ["Fútbol", "Baloncesto", "Tenis", "Pádel", "Balonmano", "Volleyball", "Badminton", "Tenis de Mesa", "Gimnasio", "Running", "Natación", "Ciclismo", "Otro"])
+            dep = st.selectbox("Deporte/Actividad", ["Fútbol", "Baloncesto", "Tenis", "Pádel", "Balonmano", "Volleyball", "Badminton", "Tenis de Mesa", "Gimnasio", "Running", "Natación", "Ciclismo", "Otro"])
             dur = st.number_input("Duración (minutos)", 1, 400, 60)
             rpe = st.select_slider("RPE (1-10)", options=list(range(1,11)), value=5)
-            notas = st.text_area("📓 Diario", placeholder="Sensaciones...")
-            if st.form_submit_button("Guardar Sesión ✅"):
+            notas = st.text_area("📓 Diario", placeholder="Sensaciones de la sesión...")
+            if st.form_submit_button("Guardar Registro ✅"):
                 df = pd.read_csv(DB)
                 nueva = pd.DataFrame([[str(f_s), 'ENTRENO', dep, dur, rpe, dur*rpe, 0, 0, 0, 0, 0, notas, '']], columns=COLUMNAS)
                 pd.concat([df, nueva], ignore_index=True).to_csv(DB, index=False)
-                st.success("Sesión registrada.")
+                st.success("Actividad registrada.")
                 st.rerun()
 
     elif menu == "🏆 Ranking del Grupo":
@@ -230,13 +230,12 @@ if check_password():
                         st.rerun()
             st.dataframe(df_filtrado.sort_values(by="Fecha", ascending=False))
 
-    # --- 📖 GUÍA DE AYUDA (REDACTADA CON DETALLE) ---
     elif menu == "📖 Guía de Ayuda":
         st.header("📖 Guía de Interpretación de Datos")
         
         with st.expander("🏅 Sistema de Medallas (Tu Compromiso)", expanded=True):
             st.write("""
-            La disciplina fuera del campo es tan importante como el entrenamiento. Este sistema premia tu rigor diario al registrar tus datos:
+            **La disciplina y el compromiso diario son los pilares que sustentan tu rendimiento a largo plazo.** Este sistema premia tu rigor al registrar tus datos:
             
             | Medalla | Racha Requerida | Significado |
             | :--- | :--- | :--- |
@@ -251,32 +250,17 @@ if check_password():
 
         with st.expander("🌅 Cuestionario Wellness (Método Hooper)"):
             st.write("""
-            El **Wellness** nos indica tu capacidad de recuperación basal. Evaluamos 5 parámetros de 1 a 5, donde **5 es el estado óptimo** y 1 el peor:
-            
-            * **Sueño:** Calidad y descanso real, no solo horas en la cama.
-            * **Estrés:** Carga mental externa (exámenes, trabajo, familia) que afecta a tu energía.
-            * **Fatiga:** Sensación general de cansancio antes de empezar el día.
-            * **Dolor Muscular:** Agujetas o molestias localizadas.
-            * **Estado de Ánimo:** Disposición psicológica para afrontar el entrenamiento.
-            
-            **Las Notas:** Úsalas para justificar tus puntuaciones. Si duermes mal por el calor o tienes un examen, el Coach necesita saberlo para ajustar tu carga.
+            El **Wellness** nos indica tu capacidad de recuperación basal. Evaluamos 5 parámetros de 1 a 5, donde **5 es el estado óptimo** y 1 el peor. Las notas ayudan al Coach a entender el contexto de tu fatiga o descanso.
             """)
             
         with st.expander("📉 Monotonía (Variabilidad de la Carga)"):
             st.write("""
-            La **Monotonía** mide si tus entrenamientos son demasiado parecidos entre sí a lo largo de la semana. 
-            
-            * **Zona Óptima (< 1.5):** Estás variando intensidades, lo que permite al cuerpo adaptarse y mejorar.
-            * **Zona de Alerta (1.5 - 2.0):** Los entrenamientos son muy planos. El riesgo de estancamiento aumenta.
-            * **Zona de Peligro (> 2.0):** Estás haciendo "siempre lo mismo". El riesgo de sobreentrenamiento y lesión por estrés repetitivo es muy alto.
+            Mide si tus cargas son muy similares día tras día. Una monotonía alta (> 2.0) aumenta el riesgo de sobreentrenamiento.
             """)
 
         with st.expander("⚖️ Ratio ACWR (Aguda vs Crónica)"):
             st.write("""
-            Es la métrica reina para prevenir lesiones. Compara la carga que has hecho los últimos 7 días (**Aguda**) con la media de los últimos 28 días (**Crónica**).
-            
-            * **Zona de Recuperación (0.0 - 0.8):** Estás entrenando por debajo de tu nivel habitual (desentrenamiento o semana de descarga).
-            * **Punto Dulce (0.8 - 1.3):** Estás en el nivel óptimo. Progresas de forma segura y efectiva.
-            * **Zona de Alerta (1.3 - 1.5):** Has subido la intensidad demasiado rápido. Hay que vigilar la fatiga.
-            * **Zona de Peligro (> 1.5):** El riesgo de lesión se multiplica por 4. Has sometido a tu cuerpo a un esfuerzo al que no está acostumbrado.
+            Compara tu carga de la última semana contra tu media del mes. 
+            * **Punto Dulce (0.8 - 1.3):** Progresión segura.
+            * **Zona de Peligro (> 1.5):** Riesgo crítico de lesión.
             """)
