@@ -33,7 +33,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. USUARIOS ---
+# --- 2. DICCIONARIO DE USUARIOS (ACTUALIZADO CON MARCOS, ALEX Y JORGE) ---
 USERS = {
     "carlos": ["cafyd2026", "Carlos (Coach)", ["Staff", "Tigres"]],
     "admin": ["pro-trainer", "Admin", ["Staff"]],
@@ -42,9 +42,9 @@ USERS = {
     "manuel": ["Camavinga8", "Manuel Benito", ["Tigres"]],
     "alejandror": ["Rome3+1", "Alejandro Romero", ["Tigres"]],
     "quique": ["Chocotatrejo", "Quique", ["Tigres"]],
-    "fran": ["AtmAlcorcon", "Fran Fernández", ["Tigres"]]
-    "alexrdrgz": ["AvilaSanse", "Álex Rodríguez", ["Tigres"]]
-    "marcoscalzado": ["Madridcfusera", "Marcos Calzado", ["Tigres"]]
+    "fran": ["AtmAlcorcon", "Fran Fernández", ["Tigres"]],
+    "marcoscalzado": ["Madridcfusera", "Marcos Calzado", ["Tigres"]],
+    "alexrdrgz": ["AvilaAnse", "Alex Rodríguez", ["Tigres"]],
     "jorgerdrgz": ["Alcorconedp", "Jorge Rodríguez", ["Tigres"]]
 }
 
@@ -71,7 +71,7 @@ if check_password():
     st.sidebar.markdown(f"### 👤 {NAME}")
     menu = st.sidebar.radio("Navegación", ["🌅 Wellness (Salud)", "🏃‍♂️ Registrar Sesión", "🏆 Ranking del Grupo", "📊 Mi Análisis Pro"])
 
-    # --- 🌅 WELLNESS (CON AJUSTE VISUAL) ---
+    # --- 🌅 WELLNESS ---
     if menu == "🌅 Wellness (Salud)":
         st.header("🌅 ¿Cómo estás hoy?")
         with st.form("w_form"):
@@ -105,49 +105,46 @@ if check_password():
     elif menu == "🏆 Ranking del Grupo":
         st.header("🏆 Clasificación General (7 días)")
         g_sel = st.selectbox("Ver Grupo:", GROUPS)
-        
         res = []
         hace_7 = date.today() - timedelta(days=7)
-        
         for u, info in USERS.items():
             if g_sel in info[2] and os.path.exists(f'database_{u}.csv'):
-                d = pd.read_csv(f'database_{u}.csv')
-                if not d.empty:
-                    d['Fecha'] = pd.to_datetime(d['Fecha']).dt.date
-                    d7 = d[d['Fecha'] >= hace_7]
-                    
-                    # Cálculos
-                    carga = d7['Carga'].sum()
-                    w_df = d7[d7['Tipo'] == 'WELLNESS']
-                    wellness = ((w_df['Sueno'] + w_df['Estres'] + w_df['Fatiga']) / 3).mean() if not w_df.empty else 0
-                    
-                    diario = d7[d7['Tipo'] == 'ENTRENO'].groupby('Fecha')['Carga'].sum()
-                    serie_7 = diario.reindex(pd.date_range(hace_7, date.today()).date, fill_value=0)
-                    std = serie_7.std()
-                    mono = serie_7.mean() / std if std > 0 else 0
-                    
-                    res.append({"Atleta": info[1], "Carga": int(carga), "Wellness": round(wellness,1), "Monotonía": round(mono,2)})
-        
+                try:
+                    d = pd.read_csv(f'database_{u}.csv')
+                    if not d.empty:
+                        d['Fecha'] = pd.to_datetime(d['Fecha']).dt.date
+                        d7 = d[d['Fecha'] >= hace_7]
+                        c = d7['Carga'].sum()
+                        w_df = d7[d7['Tipo'] == 'WELLNESS']
+                        wellness = ((w_df['Sueno'] + w_df['Estres'] + w_df['Fatiga']) / 3).mean() if not w_df.empty else 0
+                        diario = d7[d7['Tipo'] == 'ENTRENO'].groupby('Fecha')['Carga'].sum()
+                        serie_7 = diario.reindex(pd.date_range(hace_7, date.today()).date, fill_value=0)
+                        std = serie_7.std()
+                        mono = serie_7.mean() / std if std > 0 else 0
+                        res.append({"Atleta": info[1], "Carga": int(c), "Wellness": round(wellness,1), "Monotonía": round(mono,2)})
+                except: continue
         if res:
             df_rank = pd.DataFrame(res).sort_values("Carga", ascending=False)
             st.dataframe(df_rank.style.background_gradient(cmap='RdYlGn', subset=['Wellness'], vmin=1, vmax=5), use_container_width=True)
+        else:
+            st.info("No hay registros en los últimos 7 días.")
 
-    # --- 📊 MI ANÁLISIS PRO (CON ACWR) ---
+    # --- 📊 MI ANÁLISIS PRO (CON ACWR Y MONOTONÍA) ---
     elif menu == "📊 Mi Análisis Pro":
         st.header(f"📊 Panel de Rendimiento: {NAME}")
         df = pd.read_csv(DB)
         if not df.empty:
             df['Fecha'] = pd.to_datetime(df['Fecha']).dt.date
-            
-            # 1. Monotonía
+            hoy = date.today()
+            hace_7 = hoy - timedelta(days=6)
             diario = df[df['Tipo'] == 'ENTRENO'].groupby('Fecha')['Carga'].sum()
-            serie_7 = diario.reindex(pd.date_range(date.today()-timedelta(days=6), date.today()).date, fill_value=0)
+            serie_7 = diario.reindex(pd.date_range(hace_7, hoy).date, fill_value=0)
             std = serie_7.std()
             mono = serie_7.mean() / std if std > 0 else 0
             
-            # 2. ACWR (Agudo/Crónico)
-            aguda = serie_7.mean() # Media 7 días
-            cronica_serie = diario.reindex(pd.date_range(date.today()-timedelta(days=27), date.today()).date, fill_value=0)
+            # ACWR
+            aguda = serie_7.mean()
+            cronica_serie = diario.reindex(pd.date_range(hoy-timedelta(days=27), hoy).date, fill_value=0)
             cronica = cronica_serie.mean()
             acwr = aguda / cronica if cronica > 0 else 1.0
             
@@ -157,11 +154,10 @@ if check_password():
             c1, c2, c3 = st.columns(3)
             c1.metric("Monotonía", f"{mono:.2f}")
             c2.metric("Ratio ACWR", f"{acwr:.2f}", help="Ideal: 0.8 a 1.3")
+            c3.metric("Carga Semanal", f"{int(serie_7.sum())} UA")
             
-            # 3. Gráfica combinada Carga vs Wellness
             st.subheader("Evolución Carga vs Wellness")
             well_diario = df[df['Tipo'] == 'WELLNESS'].groupby('Fecha')[['Sueno','Estres','Fatiga']].mean().mean(axis=1)
-            
             fig, ax1 = plt.subplots(figsize=(10, 4))
             ax1.bar(serie_7.index, serie_7.values, color='gray', alpha=0.3, label="Carga")
             ax2 = ax1.twinx()
