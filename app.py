@@ -255,12 +255,19 @@ if check_password():
             
         with st.expander("📉 Monotonía (Variabilidad de la Carga)"):
             st.write("""
-            Mide si tus cargas son muy similares día tras día. Una monotonía alta (> 2.0) aumenta el riesgo de sobreentrenamiento.
+            Mide si tus cargas son muy similares día tras día. Una **monotonía alta conlleva riesgo de sobreentrenamiento o estancamiento**.
             """)
 
         with st.expander("⚖️ Ratio ACWR (Aguda vs Crónica)"):
             st.write("""
-            Compara tu carga de la última semana contra tu media del mes. 
-            * **Punto Dulce (0.8 - 1.3):** Progresión segura.
-            * **Zona de Peligro (> 1.5):** Riesgo crítico de lesión.
+            Compara tu carga de la última semana contra tu media del mes para asegurar una progresión segura.
+            
+            * **Zona de Desentrenamiento (< 0.8):** Estás entrenando considerablemente menos de lo habitual. Puede haber riesgo de pérdida de forma o lesiones al reincorporar carga bruscamente.
+            * **Punto Dulce (0.8 - 1.3):** Carga de entrenamiento óptima. Progresión segura y mejora del rendimiento.
+            * **Zona de Peligro (> 1.5):** Riesgo crítico de lesión por exceso de carga.
+            
+            **Sistema de Semáforos:**
+            * 🟢 **Verde (0.8 - 1.3):** Todo en orden. ¡Sigue así!
+            * 🟡 **Amarillo (1.3 - 1.5 o 0.5 - 0.8):** Precaución. Estamos en el límite del desentrenamiento o de la fatiga excesiva.
+            * 🔴 **Rojo (< 0.5 o > 1.5):** Alerta máxima. Riesgo muy elevado de lesión o desajuste total.
             """)
