@@ -33,9 +33,9 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. DICCIONARIO DE USUARIOS ---
+# --- 2. DICCIONARIO DE USUARIOS (ACTUALIZADO CON EXTREMO CUIDADO) ---
 USERS = {
-    "carlos": ["cafyd2026", "Carlos (Coach)", ["Staff", "Tigres"]],
+    "carlos": ["cafyd2026", "Carlos (Coach)", ["Staff", "Tigres", "Familia"]],
     "admin": ["pro-trainer", "Admin", ["Staff"]],
     "vanessa": ["100618", "Vanessa Carrascal", ["Familia"]],
     "alejandrop": ["Prade2004", "Alejandro de Prádena", ["Tigres"]],
@@ -45,7 +45,9 @@ USERS = {
     "fran": ["AtmAlcorcon", "Fran Fernández", ["Tigres"]],
     "marcoscalzado": ["Madridcfusera", "Marcos Calzado", ["Tigres"]],
     "alexrdrgz": ["AvilaAnse", "Alex Rodríguez", ["Tigres"]],
-    "jorgerdrgz": ["Alcorconedp", "Jorge Rodríguez", ["Tigres"]]
+    "jorgerdrgz": ["Alcorconedp", "Jorge Rodríguez", ["Tigres"]],
+    "jaime": ["Chapigri", "Jaime Rodríguez", []],
+    "diego": ["Titos148", "Diego Fernández", ["Familia"]]
 }
 
 def check_password():
@@ -107,28 +109,33 @@ if check_password():
     # --- 🏆 RANKING ---
     elif menu == "🏆 Ranking del Grupo":
         st.header("🏆 Clasificación")
-        g_sel = st.selectbox("Ver Grupo:", GROUPS)
-        res = []
-        hace_7 = date.today() - timedelta(days=7)
-        for u, info in USERS.items():
-            p_db = f'database_{u}.csv'
-            if g_sel in info[2] and os.path.exists(p_db):
-                try:
-                    d = pd.read_csv(p_db)
-                    if not d.empty:
-                        d['Fecha'] = pd.to_datetime(d['Fecha']).dt.date
-                        d7 = d[d['Fecha'] >= hace_7]
-                        c = d7['Carga'].sum()
-                        w_df = d7[d7['Tipo'] == 'WELLNESS']
-                        well = w_df[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).mean() if not w_df.empty else 0
-                        diario = d7[d7['Tipo'] == 'ENTRENO'].groupby('Fecha')['Carga'].sum()
-                        serie_7 = diario.reindex(pd.date_range(hace_7, date.today()).date, fill_value=0)
-                        mono = serie_7.mean() / serie_7.std() if serie_7.std() > 0 else 0
-                        res.append({"Atleta": info[1], "Carga": int(c), "Wellness": round(well,1), "Monotonía": round(mono,2)})
-                except: continue
-        if res:
-            df_rank = pd.DataFrame(res).sort_values("Carga", ascending=False)
-            st.dataframe(df_rank.style.background_gradient(cmap='RdYlGn', subset=['Wellness'], vmin=1, vmax=5), use_container_width=True)
+        if GROUPS:
+            g_sel = st.selectbox("Ver Grupo:", GROUPS)
+            res = []
+            hace_7 = date.today() - timedelta(days=7)
+            for u, info in USERS.items():
+                p_db = f'database_{u}.csv'
+                if g_sel in info[2] and os.path.exists(p_db):
+                    try:
+                        d = pd.read_csv(p_db)
+                        if not d.empty:
+                            d['Fecha'] = pd.to_datetime(d['Fecha']).dt.date
+                            d7 = d[d['Fecha'] >= hace_7]
+                            c = d7['Carga'].sum()
+                            w_df = d7[d7['Tipo'] == 'WELLNESS']
+                            well = w_df[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).mean() if not w_df.empty else 0
+                            diario = d7[d7['Tipo'] == 'ENTRENO'].groupby('Fecha')['Carga'].sum()
+                            serie_7 = diario.reindex(pd.date_range(hace_7, date.today()).date, fill_value=0)
+                            mono = serie_7.mean() / serie_7.std() if serie_7.std() > 0 else 0
+                            res.append({"Atleta": info[1], "Carga": int(c), "Wellness": round(well,1), "Monotonía": round(mono,2)})
+                    except: continue
+            if res:
+                df_rank = pd.DataFrame(res).sort_values("Carga", ascending=False)
+                st.dataframe(df_rank.style.background_gradient(cmap='RdYlGn', subset=['Wellness'], vmin=1, vmax=5), use_container_width=True)
+            else:
+                st.info("No hay registros en los últimos 7 días.")
+        else:
+            st.info("No perteneces a ningún grupo de clasificación.")
 
     # --- 📊 ANÁLISIS PRO ---
     elif menu == "📊 Mi Análisis Pro":
@@ -185,7 +192,7 @@ if check_password():
 
             st.dataframe(df_filtrado.sort_values(by="Fecha", ascending=False))
 
-    # --- 📖 NUEVA PESTAÑA: GUÍA DE AYUDA (LA CHULETA) ---
+    # --- 📖 GUÍA DE AYUDA ---
     elif menu == "📖 Guía de Ayuda":
         st.header("📖 Guía de Interpretación de Datos")
         st.info("Usa esta guía para entender tus métricas y optimizar tu rendimiento con el Coach.")
