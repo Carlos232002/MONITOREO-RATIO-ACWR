@@ -33,7 +33,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. DICCIONARIO DE USUARIOS (ACTUALIZADO CON EXTREMO CUIDADO) ---
+# --- 2. DICCIONARIO DE USUARIOS (ACTUALIZADO CON YOEL Y DANIEL) ---
 USERS = {
     "carlos": ["cafyd2026", "Carlos (Coach)", ["Staff", "Tigres", "Familia"]],
     "admin": ["pro-trainer", "Admin", ["Staff"]],
@@ -47,7 +47,9 @@ USERS = {
     "alexrdrgz": ["AvilaAnse", "Alex Rodríguez", ["Tigres"]],
     "jorgerdrgz": ["Alcorconedp", "Jorge Rodríguez", ["Tigres"]],
     "jaime": ["Chapigri", "Jaime Rodríguez", []],
-    "diego": ["Titos148", "Diego Fernández", ["Familia"]]
+    "diego": ["Titos148", "Diego Fernández", ["Familia"]],
+    "yoel": ["Sierogenuine", "Yoel Moro", ["Tigres"]],
+    "daniel": ["Julianpinilla", "Daniel Martínez", ["Tigres"]]
 }
 
 def check_password():
@@ -205,21 +207,19 @@ if check_password():
             * **Estrés:** ¿Estás relajado o con mucha tensión mental?
             * **Dolor Muscular:** ¿Tienes muchas agujetas o molestias?
             * **Ánimo:** ¿Tienes energía y ganas de entrenar?
-            
-            **⚠️ Alerta:** Si puntúas varios ítems con 1 o 2, tu cuerpo está pidiendo un respiro.
             """)
 
         with st.expander("📉 2. Monotonía (Variabilidad)", expanded=True):
             st.write("""
             Mide si tus entrenamientos son siempre iguales o si varías la intensidad.
             * **Baja (< 1.5):** **Óptimo.** Estás variando cargas, lo que permite adaptarte y mejorar.
-            * **Alta (> 2.0):** **Peligro.** Refleja estancamiento o riesgo de sobreentrenamiento. Hacer siempre lo mismo "agota" los tejidos.
+            * **Alta (> 2.0):** **Peligro.** Refleja estancamiento o riesgo de sobreentrenamiento.
             """)
 
         with st.expander("⚖️ 3. Ratio ACWR (Carga Aguda vs Crónica)", expanded=True):
             st.write("""
             Es el equilibrio entre lo que has hecho esta semana y lo que estás acostumbrado a hacer (últimos 28 días).
             * **Zona Óptima (0.8 - 1.3):** El "punto dulce". Estás progresando de forma segura.
-            * **Zona de Alerta (1.3 - 1.5):** Estás subiendo la carga rápido. ¡Ojo!
-            * **Zona de Peligro (> 1.5):** Riesgo crítico de lesión. Has entrenado mucho más de lo normal.
+            * **Zona de Alerta (1.3 - 1.5):** Estás subiendo la carga rápido.
+            * **Zona de Peligro (> 1.5):** Riesgo crítico de lesión.
             """)
