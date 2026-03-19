@@ -60,9 +60,9 @@ USERS = {
     "daniel": ["Julianpinilla", "Daniel Martínez", ["Tigres"]]
 }
 
-# --- 3. FUNCIONES DE APOYO (RACHA Y MEDALLAS) ---
+# --- 3. FUNCIONES DE APOYO ---
 def calcular_racha_y_medalla(df):
-    if df.empty: return 0, "Hábito en proceso", "🌱"
+    if df.empty: return 0, "Estás en racha", "🌱"
     fechas = pd.to_datetime(df['Fecha']).dt.date.unique()
     fechas = sorted(fechas, reverse=True)
     racha = 0
@@ -71,7 +71,7 @@ def calcular_racha_y_medalla(df):
     if fechas and fechas[0] < target:
         if fechas[0] == target - timedelta(days=1):
             target = target - timedelta(days=1)
-        else: return 0, "Hábito en proceso", "🌱"
+        else: return 0, "Estás en racha", "🌱"
 
     for f in fechas:
         if f == target:
@@ -84,7 +84,7 @@ def calcular_racha_y_medalla(df):
     if racha >= 30: return racha, "ELITE DE PLATA", "🥈"
     if racha >= 14: return racha, "CONSTANCIA BRONCE", "🥉"
     if racha >= 7: return racha, "MÉRITO CHOCOLATE", "🍫"
-    return racha, "Hábito en proceso", "🌱"
+    return racha, "Estás en racha", "🌱"
 
 def check_password():
     if "authenticated" not in st.session_state:
@@ -107,7 +107,6 @@ if check_password():
     if not os.path.exists(DB):
         pd.DataFrame(columns=COLUMNAS).to_csv(DB, index=False)
 
-    # --- SIDEBAR: MEDALLAS Y RACHA ---
     df_actual = pd.read_csv(DB)
     racha_num, medalla_txt, icono = calcular_racha_y_medalla(df_actual)
     
@@ -122,7 +121,6 @@ if check_password():
     
     menu = st.sidebar.radio("Navegación", ["🌅 Wellness (Salud)", "🏃‍♂️ Registrar Sesión", "🏆 Ranking del Grupo", "📊 Mi Análisis Pro", "📥 Exportar mis Datos", "📖 Guía de Ayuda"])
 
-    # --- 🌅 WELLNESS ---
     if menu == "🌅 Wellness (Salud)":
         st.header("🌅 Cuestionario Wellness (Hooper)")
         with st.form("w_form"):
@@ -141,7 +139,6 @@ if check_password():
                 st.success("¡Datos guardados!")
                 st.rerun()
 
-    # --- 🏃‍♂️ REGISTRAR SESIÓN ---
     elif menu == "🏃‍♂️ Registrar Sesión":
         st.header("🏃‍♂️ Registro de Entrenamiento")
         with st.form("s_form"):
@@ -157,7 +154,6 @@ if check_password():
                 st.success("Sesión registrada.")
                 st.rerun()
 
-    # --- 🏆 RANKING ---
     elif menu == "🏆 Ranking del Grupo":
         st.header("🏆 Clasificación")
         if GROUPS:
@@ -182,7 +178,6 @@ if check_password():
                 st.dataframe(df_rank.style.background_gradient(cmap='RdYlGn', subset=['Wellness'], vmin=1, vmax=5), use_container_width=True)
         else: st.info("No tienes grupos asignados.")
 
-    # --- 📊 ANÁLISIS PRO ---
     elif menu == "📊 Mi Análisis Pro":
         st.header(f"📊 Panel Pro: {NAME}")
         df = pd.read_csv(DB)
@@ -209,7 +204,6 @@ if check_password():
             ax.legend()
             st.pyplot(fig)
 
-    # --- 📥 EXPORTAR Y GESTIONAR ---
     elif menu == "📥 Exportar mis Datos":
         st.header("📥 Gestión de Datos")
         df = pd.read_csv(DB)
@@ -236,27 +230,53 @@ if check_password():
                         st.rerun()
             st.dataframe(df_filtrado.sort_values(by="Fecha", ascending=False))
 
-    # --- 📖 GUÍA DE AYUDA (CON MEDALLAS DETALLADAS) ---
+    # --- 📖 GUÍA DE AYUDA (REDACTADA CON DETALLE) ---
     elif menu == "📖 Guía de Ayuda":
-        st.header("📖 Guía de Interpretación")
+        st.header("📖 Guía de Interpretación de Datos")
         
-        with st.expander("🏅 Sistema de Medallas (Compromiso)", expanded=True):
+        with st.expander("🏅 Sistema de Medallas (Tu Compromiso)", expanded=True):
             st.write("""
-            Tu disciplina es clave para que el Coach pueda ayudarte. Estos son tus rangos según los días seguidos que registres:
+            La disciplina fuera del campo es tan importante como el entrenamiento. Este sistema premia tu rigor diario al registrar tus datos:
             
             | Medalla | Racha Requerida | Significado |
             | :--- | :--- | :--- |
-            | 🍫 **Chocolate** | **7 Días** | ¡Buen comienzo! Has superado la primera semana. |
-            | 🥉 **Bronce** | **14 Días** | Hábito creado. Ya eres constante. |
-            | 🥈 **Plata** | **30 Días** | Compromiso de Élite. Mentalidad profesional. |
-            | 🥇 **Oro** | **90 Días** | Disciplina de Tigre. Máximo nivel de rigor. |
-            | 💎 **Diamante** | **180 Días** | Leyenda del Club. Referente para el grupo. |
+            | 🍫 **Chocolate** | **7 Días** | ¡Buen comienzo! Has superado la barrera de la primera semana. |
+            | 🥉 **Bronce** | **14 Días** | Hábito creado. Empiezas a demostrar una constancia sólida. |
+            | 🥈 **Plata** | **30 Días** | Compromiso de Élite. Un mes entero sin fallar denota mentalidad profesional. |
+            | 🥇 **Oro** | **90 Días** | Disciplina de Tigre. Máximo nivel de rigor y seriedad con tu salud. |
+            | 💎 **Diamante** | **180 Días** | Leyenda del Club. Referente absoluto de compromiso para todo el grupo. |
             
-            *⚠️ **Aviso:** Si olvidas registrar tus datos un día entero, la racha volverá a cero.*
+            *⚠️ **Importante:** La racha se mantiene simplemente registrando el Wellness. Si olvidas registrar tus datos un día entero, el contador volverá a cero.*
             """)
 
-        with st.expander("🌅 Cuestionario Wellness (Hooper)"):
-            st.write("Puntúa de 1 a 5. El 5 representa el estado óptimo. Las notas ayudan al Coach a entender tus números.")
+        with st.expander("🌅 Cuestionario Wellness (Método Hooper)"):
+            st.write("""
+            El **Wellness** nos indica tu capacidad de recuperación basal. Evaluamos 5 parámetros de 1 a 5, donde **5 es el estado óptimo** y 1 el peor:
             
-        with st.expander("📉 ACWR y Monotonía"):
-            st.write("Ratio ACWR Óptimo: 0.8 a 1.3. Monotonía Óptima: < 1.5. Más de 2.0 indica peligro de lesión.")
+            * **Sueño:** Calidad y descanso real, no solo horas en la cama.
+            * **Estrés:** Carga mental externa (exámenes, trabajo, familia) que afecta a tu energía.
+            * **Fatiga:** Sensación general de cansancio antes de empezar el día.
+            * **Dolor Muscular:** Agujetas o molestias localizadas.
+            * **Estado de Ánimo:** Disposición psicológica para afrontar el entrenamiento.
+            
+            **Las Notas:** Úsalas para justificar tus puntuaciones. Si duermes mal por el calor o tienes un examen, el Coach necesita saberlo para ajustar tu carga.
+            """)
+            
+        with st.expander("📉 Monotonía (Variabilidad de la Carga)"):
+            st.write("""
+            La **Monotonía** mide si tus entrenamientos son demasiado parecidos entre sí a lo largo de la semana. 
+            
+            * **Zona Óptima (< 1.5):** Estás variando intensidades, lo que permite al cuerpo adaptarse y mejorar.
+            * **Zona de Alerta (1.5 - 2.0):** Los entrenamientos son muy planos. El riesgo de estancamiento aumenta.
+            * **Zona de Peligro (> 2.0):** Estás haciendo "siempre lo mismo". El riesgo de sobreentrenamiento y lesión por estrés repetitivo es muy alto.
+            """)
+
+        with st.expander("⚖️ Ratio ACWR (Aguda vs Crónica)"):
+            st.write("""
+            Es la métrica reina para prevenir lesiones. Compara la carga que has hecho los últimos 7 días (**Aguda**) con la media de los últimos 28 días (**Crónica**).
+            
+            * **Zona de Recuperación (0.0 - 0.8):** Estás entrenando por debajo de tu nivel habitual (desentrenamiento o semana de descarga).
+            * **Punto Dulce (0.8 - 1.3):** Estás en el nivel óptimo. Progresas de forma segura y efectiva.
+            * **Zona de Alerta (1.3 - 1.5):** Has subido la intensidad demasiado rápido. Hay que vigilar la fatiga.
+            * **Zona de Peligro (> 1.5):** El riesgo de lesión se multiplica por 4. Has sometido a tu cuerpo a un esfuerzo al que no está acostumbrado.
+            """)
