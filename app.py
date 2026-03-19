@@ -2,13 +2,13 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import date, timedelta
 import os
 import base64
+from datetime import date, timedelta
 from io import BytesIO
 from PIL import Image
 
-# --- 1. CONFIGURACIÓN Y LOGO ---
+# --- 1. CONFIGURACIÓN Y LOGO (MÉTODO BLINDADO) ---
 st.set_page_config(page_title="Rendimiento ACWR", page_icon="🐯", layout="wide")
 
 def get_base64_logo(path):
@@ -33,7 +33,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. DICCIONARIO DE USUARIOS (ACTUALIZADO CON MARCOS, ALEX Y JORGE) ---
+# --- 2. DICCIONARIO DE USUARIOS (TODOS INCLUIDOS) ---
 USERS = {
     "carlos": ["cafyd2026", "Carlos (Coach)", ["Staff", "Tigres"]],
     "admin": ["pro-trainer", "Admin", ["Staff"]],
@@ -61,33 +61,38 @@ def check_password():
         return False
     return True
 
+# --- 3. LÓGICA PRINCIPAL ---
 if check_password():
     USER, NAME, GROUPS, DB = st.session_state.user, st.session_state.name, st.session_state.groups, st.session_state.db
-    COLUMNAS = ['Fecha','Tipo','Disciplina','Duracion','RPE','Carga','Sueno','Estres','Fatiga','Notas','Foto']
+    # Columnas extendidas para incluir todos los items de Hooper
+    COLUMNAS = ['Fecha','Tipo','Disciplina','Duracion','RPE','Carga','Sueno','Estres','Fatiga','Muscular','Animo','Notas','Foto']
     
     if not os.path.exists(DB):
         pd.DataFrame(columns=COLUMNAS).to_csv(DB, index=False)
 
     st.sidebar.markdown(f"### 👤 {NAME}")
-    menu = st.sidebar.radio("Navegación", ["🌅 Wellness (Salud)", "🏃‍♂️ Registrar Sesión", "🏆 Ranking del Grupo", "📊 Mi Análisis Pro"])
+    menu = st.sidebar.radio("Navegación", ["🌅 Wellness (Salud)", "🏃‍♂️ Registrar Sesión", "🏆 Ranking del Grupo", "📊 Mi Análisis Pro", "📥 Exportar mis Datos"])
 
-    # --- 🌅 WELLNESS ---
+    # --- 🌅 WELLNESS PRO (5 ÍTEMS HOOPER) ---
     if menu == "🌅 Wellness (Salud)":
-        st.header("🌅 ¿Cómo estás hoy?")
+        st.header("🌅 Cuestionario Wellness (Hooper)")
         with st.form("w_form"):
             f_w = st.date_input("Fecha", value=date.today())
-            st.write("*(1 = Muy Mal / 5 = Excelente)*")
-            s = st.slider("Calidad del Sueño", 1, 5, 3, help="1: No dormí | 5: Dormí genial")
-            e = st.slider("Nivel de Estrés (Relajación)", 1, 5, 3, help="1: Super estresado | 5: Muy relajado")
-            f = st.slider("Nivel de Energía", 1, 5, 3, help="1: Agotado | 5: A tope")
+            st.info("Puntúa de 1 (Fatal) a 5 (Excelente)")
+            s = st.slider("Calidad del Sueño", 1, 5, 3)
+            e = st.slider("Nivel de Estrés (Relajación)", 1, 5, 3)
+            f = st.slider("Fatiga Percibida (Frescura)", 1, 5, 3)
+            m = st.slider("Dolor Muscular (DOMS)", 1, 5, 3, help="5 es sin dolores")
+            a = st.slider("Estado de Ánimo (Energía)", 1, 5, 3)
+            
             if st.form_submit_button("Guardar Wellness ✅"):
                 df = pd.read_csv(DB)
                 df = df.drop(df[(df['Fecha'] == str(f_w)) & (df['Tipo'] == 'WELLNESS')].index)
-                nueva = pd.DataFrame([[str(f_w), 'WELLNESS', '-', 0, 0, 0, s, e, f, '', '']], columns=COLUMNAS)
+                nueva = pd.DataFrame([[str(f_w), 'WELLNESS', '-', 0, 0, 0, s, e, f, m, a, 'Basal', '']], columns=COLUMNAS)
                 pd.concat([df, nueva], ignore_index=True).to_csv(DB, index=False)
                 st.success("Wellness guardado correctamente.")
 
-    # --- 🏃‍♂️ REGISTRAR SESIÓN ---
+    # --- 🏃‍♂️ REGISTRAR SESIÓN (CON DIARIO/NOTAS) ---
     elif menu == "🏃‍♂️ Registrar Sesión":
         st.header("🏃‍♂️ Registro de Entrenamiento")
         with st.form("s_form"):
@@ -95,15 +100,17 @@ if check_password():
             dep = st.selectbox("Deporte", ["Tenis", "Fútbol", "Gimnasio", "Running", "Pádel", "Otro"])
             dur = st.number_input("Duración (minutos)", 1, 400, 60)
             rpe = st.select_slider("Esfuerzo Percibido (RPE 1-10)", options=list(range(1,11)), value=5)
+            notas = st.text_area("📓 Diario de entrenamiento (sensaciones, molestias...)", placeholder="Hoy me he sentido...")
+            
             if st.form_submit_button("Guardar Sesión ✅"):
                 df = pd.read_csv(DB)
-                nueva = pd.DataFrame([[str(f_s), 'ENTRENO', dep, dur, rpe, dur*rpe, 0, 0, 0, '', '']], columns=COLUMNAS)
+                nueva = pd.DataFrame([[str(f_s), 'ENTRENO', dep, dur, rpe, dur*rpe, 0, 0, 0, 0, 0, notas, '']], columns=COLUMNAS)
                 pd.concat([df, nueva], ignore_index=True).to_csv(DB, index=False)
-                st.success("Sesión guardada.")
+                st.success("Sesión guardada en tu diario.")
 
-    # --- 🏆 RANKING (MULTIMÉTRICA) ---
+    # --- 🏆 RANKING MULTIMÉTRICA ---
     elif menu == "🏆 Ranking del Grupo":
-        st.header("🏆 Clasificación General (7 días)")
+        st.header("🏆 Clasificación de la Manada")
         g_sel = st.selectbox("Ver Grupo:", GROUPS)
         res = []
         hace_7 = date.today() - timedelta(days=7)
@@ -116,51 +123,66 @@ if check_password():
                         d7 = d[d['Fecha'] >= hace_7]
                         c = d7['Carga'].sum()
                         w_df = d7[d7['Tipo'] == 'WELLNESS']
-                        wellness = ((w_df['Sueno'] + w_df['Estres'] + w_df['Fatiga']) / 3).mean() if not w_df.empty else 0
+                        # Media de los 5 items de Wellness
+                        well = w_df[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).mean() if not w_df.empty else 0
                         diario = d7[d7['Tipo'] == 'ENTRENO'].groupby('Fecha')['Carga'].sum()
                         serie_7 = diario.reindex(pd.date_range(hace_7, date.today()).date, fill_value=0)
-                        std = serie_7.std()
-                        mono = serie_7.mean() / std if std > 0 else 0
-                        res.append({"Atleta": info[1], "Carga": int(c), "Wellness": round(wellness,1), "Monotonía": round(mono,2)})
+                        mono = serie_7.mean() / serie_7.std() if serie_7.std() > 0 else 0
+                        res.append({"Atleta": info[1], "Carga": int(c), "Wellness": round(well,1), "Monotonía": round(mono,2)})
                 except: continue
         if res:
             df_rank = pd.DataFrame(res).sort_values("Carga", ascending=False)
             st.dataframe(df_rank.style.background_gradient(cmap='RdYlGn', subset=['Wellness'], vmin=1, vmax=5), use_container_width=True)
-        else:
-            st.info("No hay registros en los últimos 7 días.")
 
-    # --- 📊 MI ANÁLISIS PRO (CON ACWR Y MONOTONÍA) ---
+    # --- 📊 ANÁLISIS PRO (ACWR SEMÁFORO + GRÁFICO AGUDA/CRÓNICA) ---
     elif menu == "📊 Mi Análisis Pro":
         st.header(f"📊 Panel de Rendimiento: {NAME}")
         df = pd.read_csv(DB)
         if not df.empty:
             df['Fecha'] = pd.to_datetime(df['Fecha']).dt.date
             hoy = date.today()
-            hace_7 = hoy - timedelta(days=6)
-            diario = df[df['Tipo'] == 'ENTRENO'].groupby('Fecha')['Carga'].sum()
-            serie_7 = diario.reindex(pd.date_range(hace_7, hoy).date, fill_value=0)
-            std = serie_7.std()
-            mono = serie_7.mean() / std if std > 0 else 0
             
-            # ACWR
-            aguda = serie_7.mean()
+            # Carga Aguda (7d) y Crónica (28d)
+            diario = df[df['Tipo'] == 'ENTRENO'].groupby('Fecha')['Carga'].sum()
+            aguda_serie = diario.reindex(pd.date_range(hoy-timedelta(days=6), hoy).date, fill_value=0)
             cronica_serie = diario.reindex(pd.date_range(hoy-timedelta(days=27), hoy).date, fill_value=0)
+            
+            aguda = aguda_serie.mean()
             cronica = cronica_serie.mean()
             acwr = aguda / cronica if cronica > 0 else 1.0
             
-            if mono > 2.0:
-                st.error(f"🚨 ¡Cuidado **{NAME.split(' ')[0]}**! Te pasas de monótono.")
+            # Monotonía
+            mono = aguda_serie.mean() / aguda_serie.std() if aguda_serie.std() > 0 else 0
+            
+            # Semáforo ACWR
+            if acwr > 1.5: color_acwr = "inverse" # Rojo
+            elif acwr > 1.3: color_acwr = "normal" # Amarillo/Naranja
+            else: color_acwr = "off" # Verde/Neutro
 
             c1, c2, c3 = st.columns(3)
-            c1.metric("Monotonía", f"{mono:.2f}")
-            c2.metric("Ratio ACWR", f"{acwr:.2f}", help="Ideal: 0.8 a 1.3")
-            c3.metric("Carga Semanal", f"{int(serie_7.sum())} UA")
+            c1.metric("Monotonía", f"{mono:.2f}", delta="ALTA" if mono > 2.0 else "OK", delta_color="inverse" if mono > 2.0 else "normal")
+            c2.metric("Ratio ACWR", f"{acwr:.2f}", help="0.8-1.3: Óptimo | >1.5: Riesgo", delta_color=color_acwr)
+            c3.metric("Carga Semanal", f"{int(aguda_serie.sum())} UA")
             
-            st.subheader("Evolución Carga vs Wellness")
-            well_diario = df[df['Tipo'] == 'WELLNESS'].groupby('Fecha')[['Sueno','Estres','Fatiga']].mean().mean(axis=1)
-            fig, ax1 = plt.subplots(figsize=(10, 4))
-            ax1.bar(serie_7.index, serie_7.values, color='gray', alpha=0.3, label="Carga")
-            ax2 = ax1.twinx()
-            ax2.plot(well_diario.index, well_diario.values, color='#1E90FF', marker='o', label="Wellness")
-            ax2.set_ylim(0, 5)
-            st.pyplot(fig)
+            if mono > 2.0: st.error(f"🚨 ¡Cuidado **{NAME.split(' ')[0]}**! Te pasas de monótono.")
+
+            # Gráfico Aguda vs Crónica
+            st.subheader("Gráfico Aguda vs Crónica (Control de Fatiga)")
+            fig_acwr, ax_acwr = plt.subplots(figsize=(10, 4))
+            ax_acwr.plot(aguda_serie.index, [aguda]*len(aguda_serie), label="Carga Aguda (Hoy)", color='red', linestyle='--')
+            ax_acwr.plot(cronica_serie.index, cronica_serie.values, label="Carga Crónica (Histórica)", color='cyan', alpha=0.5)
+            ax_acwr.fill_between(aguda_serie.index, aguda_serie.values, color='red', alpha=0.2)
+            ax_acwr.legend()
+            st.pyplot(fig_acwr)
+
+    # --- 📥 EXPORTAR DATOS ---
+    elif menu == "📥 Exportar mis Datos":
+        st.header("📥 Descargar Historial de Entrenamiento")
+        df = pd.read_csv(DB)
+        if not df.empty:
+            st.write("Aquí puedes descargar todos tus registros para usarlos en Excel o enviárselos al Coach.")
+            csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button(label="📥 Descargar CSV para Excel", data=csv, file_name=f'datos_{USER}.csv', mime='text/csv')
+            st.dataframe(df)
+        else:
+            st.info("No hay datos para exportar todavía.")
