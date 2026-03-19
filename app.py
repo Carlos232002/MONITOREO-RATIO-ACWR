@@ -116,7 +116,7 @@ if check_password():
             s = st.slider("Calidad del Sueño", 1, 5, 3)
             e = st.slider("Nivel de Estrés", 1, 5, 3)
             fat = st.slider("Fatiga Percibida", 1, 5, 3)
-            musc = st.slider("Estado Muscular", 1, 5, 3)
+            musc = st.slider("Dolor Muscular (DOMS)", 1, 5, 3)
             animo = st.slider("Estado de Ánimo", 1, 5, 3)
             w_notas = st.text_area("🗒️ Anotaciones extra", placeholder="¿Algún detalle más?")
             
