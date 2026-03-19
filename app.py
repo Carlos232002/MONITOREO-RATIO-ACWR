@@ -250,12 +250,24 @@ if check_password():
 
         with st.expander("🌅 Cuestionario Wellness (Método Hooper)"):
             st.write("""
-            El **Wellness** nos indica tu capacidad de recuperación basal. Evaluamos 5 parámetros de 1 a 5, donde **5 es el estado óptimo** y 1 el peor. Las notas ayudan al Coach a entender el contexto de tu fatiga o descanso.
+            El **Wellness** indica tu capacidad de recuperación. Evaluamos 5 ítems de 1 a 5 (**5 es óptimo**, 1 es crítico):
+            
+            * **Calidad del Sueño:** Evalúa si el descanso ha sido reparador y profundo.
+            * **Nivel de Estrés:** Refleja la carga mental o tensiones externas al entrenamiento.
+            * **Fatiga Percibida:** Sensación general de cansancio o falta de energía.
+            * **Dolor Muscular (DOMS):** Presencia de agujetas o molestias musculares específicas.
+            * **Estado de Ánimo:** Tu predisposición psicológica y motivación para afrontar el día.
+            
+            *Mantener una media alta en estos valores asegura que estás asimilando bien el trabajo.*
             """)
             
         with st.expander("📉 Monotonía (Variabilidad de la Carga)"):
             st.write("""
-            Mide si tus cargas son muy similares día tras día. Una **monotonía alta conlleva riesgo de sobreentrenamiento o estancamiento**.
+            Mide si tus cargas son muy similares día tras día. La variabilidad es necesaria para que el cuerpo progrese.
+            
+            * **Valores Óptimos (< 1.5):** Indica que hay buena alternancia entre días intensos y de recuperación.
+            * **Zona de Riesgo (1.5 - 2.0):** Empiezas a perder variabilidad; presta atención a tu descanso.
+            * **Alerta (> 2.0):** Monotonía alta. Esto puede generar **sobreentrenamiento** (por falta de descanso) o **estancamiento** (porque el cuerpo se acostumbra y deja de mejorar).
             """)
 
         with st.expander("⚖️ Ratio ACWR (Aguda vs Crónica)"):
