@@ -70,7 +70,7 @@ if check_password():
         pd.DataFrame(columns=COLUMNAS).to_csv(DB, index=False)
 
     st.sidebar.markdown(f"### 👤 {NAME}")
-    menu = st.sidebar.radio("Navegación", ["🌅 Wellness (Salud)", "🏃‍♂️ Registrar Sesión", "🏆 Ranking del Grupo", "📊 Mi Análisis Pro", "📥 Exportar mis Datos"])
+    menu = st.sidebar.radio("Navegación", ["🌅 Wellness (Salud)", "🏃‍♂️ Registrar Sesión", "🏆 Ranking del Grupo", "📊 Mi Análisis Pro", "📥 Exportar mis Datos", "📖 Guía de Ayuda"])
 
     # --- 🌅 WELLNESS ---
     if menu == "🌅 Wellness (Salud)":
@@ -157,54 +157,62 @@ if check_password():
             ax.legend()
             st.pyplot(fig)
 
-    # --- 📥 GESTIÓN DE DATOS CON FILTROS ---
+    # --- 📥 GESTIÓN DE DATOS ---
     elif menu == "📥 Exportar mis Datos":
-        st.header("📥 Gestión de Datos e Historial")
+        st.header("📥 Gestión de Datos")
         df = pd.read_csv(DB)
         if not df.empty:
             df['Fecha'] = pd.to_datetime(df['Fecha']).dt.date
-            
-            # --- FILTROS TEMPORALES ---
-            st.subheader("🔍 Filtrar historial")
-            col_f1, col_f2 = st.columns(2)
-            
-            with col_f1:
-                tipo_filtro = st.radio("Ver por:", ["Todo", "Esta Semana", "Mes Específico"], horizontal=True)
-            
+            tipo_filtro = st.radio("Filtro:", ["Todo", "Esta Semana", "Mes Específico"], horizontal=True)
             df_filtrado = df.copy()
-            hoy = date.today()
-            
             if tipo_filtro == "Esta Semana":
-                inicio_semana = hoy - timedelta(days=hoy.weekday())
-                df_filtrado = df[df['Fecha'] >= inicio_semana]
-                
+                df_filtrado = df[df['Fecha'] >= (date.today() - timedelta(days=date.today().weekday()))]
             elif tipo_filtro == "Mes Específico":
-                with col_f2:
-                    meses = sorted(list(set(df['Fecha'].apply(lambda x: x.strftime('%Y-%m')))), reverse=True)
-                    mes_sel = st.selectbox("Selecciona Mes:", meses)
-                    df_filtrado = df[df['Fecha'].apply(lambda x: x.strftime('%Y-%m')) == mes_sel]
-
-            # --- DESCARGA ---
-            st.write(f"Mostrando **{len(df_filtrado)}** registros.")
-            csv = df_filtrado.to_csv(index=False).encode('utf-8')
-            st.download_button(label=f"📥 Descargar selección ({tipo_filtro})", data=csv, file_name=f'datos_{USER}_{tipo_filtro}.csv', mime='text/csv')
+                meses = sorted(list(set(df['Fecha'].apply(lambda x: x.strftime('%Y-%m')))), reverse=True)
+                mes_sel = st.selectbox("Mes:", meses)
+                df_filtrado = df[df['Fecha'].apply(lambda x: x.strftime('%Y-%m')) == mes_sel]
             
-            st.markdown("---")
-            st.subheader("🗑️ Corregir Errores")
-            with st.form("delete_form"):
-                fechas_borrar = sorted(df_filtrado['Fecha'].unique(), reverse=True)
-                f_del = st.selectbox("Selecciona fecha para borrar:", fechas_borrar)
-                conf = st.checkbox("Confirmo que quiero borrar este día")
-                if st.form_submit_button("Eliminar Día 🗑️"):
+            csv = df_filtrado.to_csv(index=False).encode('utf-8')
+            st.download_button(label="📥 Descargar Selección", data=csv, file_name=f'datos_{USER}.csv')
+            
+            with st.form("del_f"):
+                f_del = st.selectbox("Borrar fecha:", sorted(df_filtrado['Fecha'].unique(), reverse=True))
+                conf = st.checkbox("Confirmar borrado")
+                if st.form_submit_button("Eliminar"):
                     if conf:
-                        df_new = df[df['Fecha'] != f_del]
-                        df_new.to_csv(DB, index=False)
-                        st.success("Borrado. Actualizando...")
+                        df[df['Fecha'] != f_del].to_csv(DB, index=False)
                         st.rerun()
-                    else: st.error("Marca la confirmación.")
 
-            st.markdown("---")
-            st.subheader("📋 Vista Previa")
-            st.dataframe(df_filtrado.sort_values(by="Fecha", ascending=False), use_container_width=True)
-        else:
-            st.info("No hay datos todavía.")
+            st.dataframe(df_filtrado.sort_values(by="Fecha", ascending=False))
+
+    # --- 📖 NUEVA PESTAÑA: GUÍA DE AYUDA (LA CHULETA) ---
+    elif menu == "📖 Guía de Ayuda":
+        st.header("📖 Guía de Interpretación de Datos")
+        st.info("Usa esta guía para entender tus métricas y optimizar tu rendimiento con el Coach.")
+        
+        with st.expander("🌅 1. Wellness (Cuestionario Hooper)", expanded=True):
+            st.write("""
+            El Wellness mide cómo te sientes cada mañana antes de entrenar. Puntúa de 1 a 5 (**5 es lo mejor**).
+            * **Calidad de Sueño:** ¿Has descansado?
+            * **Fatiga:** ¿Te sientes fresco o agotado?
+            * **Estrés:** ¿Estás relajado o con mucha tensión mental?
+            * **Dolor Muscular:** ¿Tienes muchas agujetas o molestias?
+            * **Ánimo:** ¿Tienes energía y ganas de entrenar?
+            
+            **⚠️ Alerta:** Si puntúas varios ítems con 1 o 2, tu cuerpo está pidiendo un respiro.
+            """)
+
+        with st.expander("📉 2. Monotonía (Variabilidad)", expanded=True):
+            st.write("""
+            Mide si tus entrenamientos son siempre iguales o si varías la intensidad.
+            * **Baja (< 1.5):** **Óptimo.** Estás variando cargas, lo que permite adaptarte y mejorar.
+            * **Alta (> 2.0):** **Peligro.** Refleja estancamiento o riesgo de sobreentrenamiento. Hacer siempre lo mismo "agota" los tejidos.
+            """)
+
+        with st.expander("⚖️ 3. Ratio ACWR (Carga Aguda vs Crónica)", expanded=True):
+            st.write("""
+            Es el equilibrio entre lo que has hecho esta semana y lo que estás acostumbrado a hacer (últimos 28 días).
+            * **Zona Óptima (0.8 - 1.3):** El "punto dulce". Estás progresando de forma segura.
+            * **Zona de Alerta (1.3 - 1.5):** Estás subiendo la carga rápido. ¡Ojo!
+            * **Zona de Peligro (> 1.5):** Riesgo crítico de lesión. Has entrenado mucho más de lo normal.
+            """)
