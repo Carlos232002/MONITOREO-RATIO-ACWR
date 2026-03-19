@@ -8,6 +8,36 @@ from datetime import date, timedelta, datetime
 from io import BytesIO
 from PIL import Image
 
+# --- 1. CONFIGURACIÓN Y TRUCO PARA EL ICONO EN IPHONE (SAFARI) ---
+st.set_page_config(
+    page_title="My Performance Journal", 
+    page_icon="logo_app.png",  # Este es para navegadores web
+    layout="wide"
+)
+
+# He movido la función del logo aquí arriba para poder usarla antes
+def get_base64_logo(path):
+    if os.path.exists(path):
+        with open(path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    return None
+
+logo_b64 = get_base64_logo("logo_app.png")
+
+# --- ¡ESTA ES LA LÍNEA MÁGICA PARA QUE SAFARI USE TU LOGO DE GITHUB! ---
+if logo_b64:
+    st.markdown(f'<link rel="apple-touch-icon" href="data:image/png;base64,{logo_b64}">', unsafe_allow_html=True)
+# ----------------------------------------------------------------------
+
+
+# --- 2. ESTILOS Y LOGO EN SIDEBAR ---
+logo_style = f'url("data:image/png;base64,{logo_b64}")' if logo_b64 else 'url("https://raw.githubusercontent.com/Carlos232002/MONITOREO-RATIO-ACWR/main/logo_app.png")'
+
+# (A partir de aquí, el resto de tu código de estilos .markdown, etc., sigue igual)
+from datetime import date, timedelta, datetime
+from io import BytesIO
+from PIL import Image
+
 # --- 1. CONFIGURACIÓN Y LOGO ---
 st.set_page_config(
     page_title="My Performance Journal", 
