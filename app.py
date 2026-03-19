@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import base64
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from io import BytesIO
 from PIL import Image
 
@@ -77,12 +77,11 @@ if check_password():
         st.header("🌅 Cuestionario Wellness (Hooper)")
         with st.form("w_form"):
             f_w = st.date_input("Fecha", value=date.today())
-            st.info("Puntúa de 1 (Fatal) a 5 (Excelente)")
             s = st.slider("Calidad del Sueño", 1, 5, 3)
-            e = st.slider("Nivel de Estrés (Relajación)", 1, 5, 3)
-            f = st.slider("Fatiga Percibida (Frescura)", 1, 5, 3)
-            m = st.slider("Dolor Muscular (DOMS)", 1, 5, 3)
-            a = st.slider("Estado de Ánimo (Energía)", 1, 5, 3)
+            e = st.slider("Nivel de Estrés", 1, 5, 3)
+            f = st.slider("Fatiga Percibida", 1, 5, 3)
+            m = st.slider("Dolor Muscular", 1, 5, 3)
+            a = st.slider("Estado de Ánimo", 1, 5, 3)
             if st.form_submit_button("Guardar Wellness ✅"):
                 df = pd.read_csv(DB)
                 df = df.drop(df[(df['Fecha'] == str(f_w)) & (df['Tipo'] == 'WELLNESS')].index)
@@ -97,8 +96,8 @@ if check_password():
             f_s = st.date_input("Fecha", value=date.today())
             dep = st.selectbox("Deporte", ["Fútbol", "Baloncesto", "Tenis", "Pádel", "Balonmano", "Volleyball", "Badminton", "Tenis de Mesa", "Gimnasio", "Running", "Natación", "Ciclismo", "Otro"])
             dur = st.number_input("Duración (minutos)", 1, 400, 60)
-            rpe = st.select_slider("Esfuerzo Percibido (RPE 1-10)", options=list(range(1,11)), value=5)
-            notas = st.text_area("📓 Diario de entrenamiento", placeholder="Sensaciones, molestias...")
+            rpe = st.select_slider("RPE (1-10)", options=list(range(1,11)), value=5)
+            notas = st.text_area("📓 Diario", placeholder="Sensaciones...")
             if st.form_submit_button("Guardar Sesión ✅"):
                 df = pd.read_csv(DB)
                 nueva = pd.DataFrame([[str(f_s), 'ENTRENO', dep, dur, rpe, dur*rpe, 0, 0, 0, 0, 0, notas, '']], columns=COLUMNAS)
@@ -133,7 +132,7 @@ if check_password():
 
     # --- 📊 ANÁLISIS PRO ---
     elif menu == "📊 Mi Análisis Pro":
-        st.header(f"📊 Panel de Rendimiento: {NAME}")
+        st.header(f"📊 Panel Pro: {NAME}")
         df = pd.read_csv(DB)
         if not df.empty:
             df['Fecha'] = pd.to_datetime(df['Fecha']).dt.date
@@ -158,36 +157,54 @@ if check_password():
             ax.legend()
             st.pyplot(fig)
 
-    # --- 📥 EXPORTAR Y GESTIONAR REGISTROS (BORRADO AÑADIDO) ---
+    # --- 📥 GESTIÓN DE DATOS CON FILTROS ---
     elif menu == "📥 Exportar mis Datos":
-        st.header("📥 Gestión de Datos")
+        st.header("📥 Gestión de Datos e Historial")
         df = pd.read_csv(DB)
         if not df.empty:
-            st.subheader("1. Descargar historial")
-            csv = df.to_csv(index=False).encode('utf-8')
-            st.download_button(label="📥 Descargar CSV", data=csv, file_name=f'datos_{USER}.csv', mime='text/csv')
+            df['Fecha'] = pd.to_datetime(df['Fecha']).dt.date
+            
+            # --- FILTROS TEMPORALES ---
+            st.subheader("🔍 Filtrar historial")
+            col_f1, col_f2 = st.columns(2)
+            
+            with col_f1:
+                tipo_filtro = st.radio("Ver por:", ["Todo", "Esta Semana", "Mes Específico"], horizontal=True)
+            
+            df_filtrado = df.copy()
+            hoy = date.today()
+            
+            if tipo_filtro == "Esta Semana":
+                inicio_semana = hoy - timedelta(days=hoy.weekday())
+                df_filtrado = df[df['Fecha'] >= inicio_semana]
+                
+            elif tipo_filtro == "Mes Específico":
+                with col_f2:
+                    meses = sorted(list(set(df['Fecha'].apply(lambda x: x.strftime('%Y-%m')))), reverse=True)
+                    mes_sel = st.selectbox("Selecciona Mes:", meses)
+                    df_filtrado = df[df['Fecha'].apply(lambda x: x.strftime('%Y-%m')) == mes_sel]
+
+            # --- DESCARGA ---
+            st.write(f"Mostrando **{len(df_filtrado)}** registros.")
+            csv = df_filtrado.to_csv(index=False).encode('utf-8')
+            st.download_button(label=f"📥 Descargar selección ({tipo_filtro})", data=csv, file_name=f'datos_{USER}_{tipo_filtro}.csv', mime='text/csv')
             
             st.markdown("---")
-            st.subheader("2. Corregir errores (Borrar día)")
-            st.warning("Selecciona una fecha para eliminar todos los registros de ese día. Luego podrás subirlos de nuevo correctamente.")
-            
-            # Formulario de borrado para evitar clicks accidentales
+            st.subheader("🗑️ Corregir Errores")
             with st.form("delete_form"):
-                fechas_disponibles = sorted(df['Fecha'].unique(), reverse=True)
-                fecha_a_borrar = st.selectbox("Fecha a eliminar:", fechas_disponibles)
-                confirmar = st.checkbox("Confirmo que quiero borrar los datos de este día")
-                
-                if st.form_submit_button("Eliminar Registros 🗑️"):
-                    if confirmar:
-                        df_nuevo = df[df['Fecha'] != str(fecha_a_borrar)]
-                        df_nuevo.to_csv(DB, index=False)
-                        st.success(f"Datos del {fecha_a_borrar} eliminados. ¡Ya puedes volver a registrarlos!")
+                fechas_borrar = sorted(df_filtrado['Fecha'].unique(), reverse=True)
+                f_del = st.selectbox("Selecciona fecha para borrar:", fechas_borrar)
+                conf = st.checkbox("Confirmo que quiero borrar este día")
+                if st.form_submit_button("Eliminar Día 🗑️"):
+                    if conf:
+                        df_new = df[df['Fecha'] != f_del]
+                        df_new.to_csv(DB, index=False)
+                        st.success("Borrado. Actualizando...")
                         st.rerun()
-                    else:
-                        st.error("Debes marcar la casilla de confirmación.")
+                    else: st.error("Marca la confirmación.")
 
             st.markdown("---")
-            st.subheader("3. Vista previa")
-            st.dataframe(df.sort_values(by="Fecha", ascending=False))
+            st.subheader("📋 Vista Previa")
+            st.dataframe(df_filtrado.sort_values(by="Fecha", ascending=False), use_container_width=True)
         else:
             st.info("No hay datos todavía.")
