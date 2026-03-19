@@ -234,7 +234,7 @@ if check_password():
 
         with st.expander("📉 Monotonía y ACWR (Análisis Avanzado)"):
             st.write("""
-            * **Monotonía:** Indica si tus cargas diarias son demasiado lineales. Una **monotonía alta (> 2.0)** no solo implica riesgo de sobreentrenamiento, sino también de **estancamiento**, ya que el cuerpo necesita variabilidad para generar nuevas adaptaciones.
+            * **Monotonía:** Indica si tus cargas diarias son demasiado lineales. Una monotonía alta (> 2.0) puede generar sobreentrenamiento o estancamiento.
             * **Ratio ACWR (Aguda vs Crónica):** Compara tu carga de la última semana contra tu media del mes.
                 * **🟢 Verde (0.8 - 1.3):** Punto Dulce. Carga óptima y segura.
                 * **🟡 Amarillo (1.3 - 1.5):** Zona de Precaución.
