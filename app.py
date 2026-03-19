@@ -110,7 +110,7 @@ if check_password():
 
     if menu == "🌅 Wellness (Salud)":
         st.header("🌅 Cuestionario Wellness (Hooper)")
-        st.info("Recuerda: 1 es lo peor y 5 es el estado óptimo (máximo descanso).")
+        st.info("Recuerda: 1 es lo peor y 5 es el estado óptimo.")
         with st.form("w_form"):
             f_w = st.date_input("Fecha", value=date.today())
             s = st.slider("Calidad del Sueño", 1, 5, 3)
@@ -228,4 +228,16 @@ if check_password():
             st.write("""
             Monitorizamos 5 variables clave de 1 a 5:
             * **5:** Estado óptimo (Descansado, sin estrés, sueño profundo, sin dolor, animado).
-            * **1:** Estado crítico (Agotado, estrés máximo, insomnio, dolor limit
+            * **1:** Estado crítico (Agotado, estrés máximo, insomnio, dolor limitante, desanimado).
+            * Mantener una media alta es síntoma de buena asimilación de la carga.
+            """)
+
+        with st.expander("📉 Monotonía y ACWR (Análisis Avanzado)"):
+            st.write("""
+            * **Monotonía:** Mide la variabilidad de tu carga. Si es muy alta (> 2.0) indica que tus entrenamientos son demasiado similares día tras día, lo que aumenta el riesgo de sobreentrenamiento.
+            * **Ratio ACWR (Aguda vs Crónica):** Compara tu carga de la última semana contra tu media del mes.
+                * **🟢 Verde (0.8 - 1.3):** Punto Dulce. Carga óptima.
+                * **🟡 Amarillo (1.3 - 1.5):** Zona de Precaución.
+                * **🔴 Rojo (> 1.5):** Alerta máxima de lesión.
+                * **Zona de Desentrenamiento (< 0.8):** Carga insuficiente; riesgo de pérdida de forma o lesión al reincorporar carga bruscamente.
+            """)
