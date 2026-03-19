@@ -119,7 +119,7 @@ if check_password():
     </div>
     """, unsafe_allow_html=True)
     
-    menu = st.sidebar.radio("Navegación", ["🌅 Wellness (Salud)", "🏃‍♂️ Registrar Sesión", "🏆 Ranking del Grupo", "📊 Mi Análisis Pro", "📥 Exportar mis Datos", "📖 Guía de Ayuda"])
+    menu = st.sidebar.radio("Navegación", ["🌅 Wellness (Salud)", "🏃‍♂️ Registrar Sesión", "🏆 Ranking del Grupo", "📊 Mi Análisis Pro", "📥 Gestión de Datos", "📖 Guía de Ayuda"])
 
     if menu == "🌅 Wellness (Salud)":
         st.header("🌅 Cuestionario Wellness (Hooper)")
@@ -204,7 +204,7 @@ if check_password():
             ax.legend()
             st.pyplot(fig)
 
-    elif menu == "📥 Exportar mis Datos":
+    elif menu == "📥 Gestión de Datos":
         st.header("📥 Gestión de Datos")
         df = pd.read_csv(DB)
         if not df.empty:
@@ -267,7 +267,7 @@ if check_password():
             
             * **Valores Óptimos (< 1.5):** Indica que hay buena alternancia entre días intensos y de recuperación.
             * **Zona de Riesgo (1.5 - 2.0):** Empiezas a perder variabilidad; presta atención a tu descanso.
-            * **Alerta (> 2.0):** Monotonía alta. Esto puede generar **sobreentrenamiento** (por falta de descanso) o **estancamiento** (porque el cuerpo se acostumbra y deja de mejorar).
+            * **Alerta (> 2.0):** Monotonía alta. Esto puede generar sobreentrenamiento (por falta de descanso) o estancamiento (porque el cuerpo se acostumbra y deja de mejorar).
             """)
 
         with st.expander("⚖️ Ratio ACWR (Aguda vs Crónica)"):
