@@ -43,6 +43,9 @@ USERS = {
     "alejandror": ["Rome3+1", "Alejandro Romero", ["Tigres"]],
     "quique": ["Chocotatrejo", "Quique", ["Tigres"]],
     "fran": ["AtmAlcorcon", "Fran Fernández", ["Tigres"]]
+    "alexrdrgz": ["AvilaSanse", "Álex Rodríguez", ["Tigres"]]
+    "marcoscalzado": ["Madridcfusera", "Marcos Calzado", ["Tigres"]]
+    "jorgerdrgz": ["Alcorconedp", "Jorge Rodríguez", ["Tigres"]]
 }
 
 def check_password():
