@@ -72,7 +72,7 @@ if check_password():
     st.sidebar.markdown(f"### 👤 {NAME}")
     menu = st.sidebar.radio("Navegación", ["🌅 Wellness (Salud)", "🏃‍♂️ Registrar Sesión", "🏆 Ranking del Grupo", "📊 Mi Análisis Pro", "📥 Exportar mis Datos"])
 
-    # --- 🌅 WELLNESS PRO (5 ÍTEMS HOOPER) ---
+    # --- 🌅 WELLNESS ---
     if menu == "🌅 Wellness (Salud)":
         st.header("🌅 Cuestionario Wellness (Hooper)")
         with st.form("w_form"):
@@ -88,14 +88,13 @@ if check_password():
                 df = df.drop(df[(df['Fecha'] == str(f_w)) & (df['Tipo'] == 'WELLNESS')].index)
                 nueva = pd.DataFrame([[str(f_w), 'WELLNESS', '-', 0, 0, 0, s, e, f, m, a, 'Basal', '']], columns=COLUMNAS)
                 pd.concat([df, nueva], ignore_index=True).to_csv(DB, index=False)
-                st.success("Wellness guardado correctamente.")
+                st.success("Wellness guardado.")
 
-    # --- 🏃‍♂️ REGISTRAR SESIÓN (CON MÁS DEPORTES) ---
+    # --- 🏃‍♂️ REGISTRAR SESIÓN ---
     elif menu == "🏃‍♂️ Registrar Sesión":
         st.header("🏃‍♂️ Registro de Entrenamiento")
         with st.form("s_form"):
             f_s = st.date_input("Fecha", value=date.today())
-            # LISTA DE DEPORTES AMPLIADA:
             dep = st.selectbox("Deporte", ["Fútbol", "Baloncesto", "Tenis", "Pádel", "Balonmano", "Volleyball", "Badminton", "Tenis de Mesa", "Gimnasio", "Running", "Natación", "Ciclismo", "Otro"])
             dur = st.number_input("Duración (minutos)", 1, 400, 60)
             rpe = st.select_slider("Esfuerzo Percibido (RPE 1-10)", options=list(range(1,11)), value=5)
@@ -104,9 +103,9 @@ if check_password():
                 df = pd.read_csv(DB)
                 nueva = pd.DataFrame([[str(f_s), 'ENTRENO', dep, dur, rpe, dur*rpe, 0, 0, 0, 0, 0, notas, '']], columns=COLUMNAS)
                 pd.concat([df, nueva], ignore_index=True).to_csv(DB, index=False)
-                st.success("Sesión guardada en tu diario.")
+                st.success("Sesión guardada.")
 
-    # --- 🏆 RANKING (CLASIFICACIÓN) ---
+    # --- 🏆 RANKING ---
     elif menu == "🏆 Ranking del Grupo":
         st.header("🏆 Clasificación")
         g_sel = st.selectbox("Ver Grupo:", GROUPS)
@@ -131,10 +130,8 @@ if check_password():
         if res:
             df_rank = pd.DataFrame(res).sort_values("Carga", ascending=False)
             st.dataframe(df_rank.style.background_gradient(cmap='RdYlGn', subset=['Wellness'], vmin=1, vmax=5), use_container_width=True)
-        else:
-            st.info("No hay registros en los últimos 7 días.")
 
-    # --- 📊 MI ANÁLISIS PRO (ACWR + SEMÁFORO) ---
+    # --- 📊 ANÁLISIS PRO ---
     elif menu == "📊 Mi Análisis Pro":
         st.header(f"📊 Panel de Rendimiento: {NAME}")
         df = pd.read_csv(DB)
@@ -148,17 +145,11 @@ if check_password():
             acwr = aguda / cronica if cronica > 0 else 1.0
             mono = aguda_serie.mean() / aguda_serie.std() if aguda_serie.std() > 0 else 0
             
-            if acwr > 1.5: color_acwr = "inverse"
-            elif acwr > 1.3: color_acwr = "normal"
-            else: color_acwr = "off"
-
             c1, c2, c3 = st.columns(3)
-            c1.metric("Monotonía", f"{mono:.2f}", delta="ALTA" if mono > 2.0 else "OK", delta_color="inverse" if mono > 2.0 else "normal")
-            c2.metric("Ratio ACWR", f"{acwr:.2f}", delta_color=color_acwr)
-            c3.metric("Carga Semanal", f"{int(aguda_serie.sum())} UA")
+            c1.metric("Monotonía", f"{mono:.2f}")
+            c2.metric("Ratio ACWR", f"{acwr:.2f}")
+            c3.metric("Carga Semanal", f"{int(aguda_serie.sum())}")
             
-            if mono > 2.0: st.error(f"🚨 ¡Cuidado **{NAME.split(' ')[0]}**! Te pasas de monótono.")
-
             st.subheader("Gráfico Aguda vs Crónica")
             fig, ax = plt.subplots(figsize=(10, 4))
             ax.plot(aguda_serie.index, [aguda]*len(aguda_serie), color='red', linestyle='--', label="Aguda")
@@ -167,14 +158,36 @@ if check_password():
             ax.legend()
             st.pyplot(fig)
 
-    # --- 📥 EXPORTAR DATOS ---
+    # --- 📥 EXPORTAR Y GESTIONAR REGISTROS (BORRADO AÑADIDO) ---
     elif menu == "📥 Exportar mis Datos":
-        st.header("📥 Descargar Historial")
+        st.header("📥 Gestión de Datos")
         df = pd.read_csv(DB)
         if not df.empty:
-            st.write("Descarga tus datos en formato CSV para Excel.")
+            st.subheader("1. Descargar historial")
             csv = df.to_csv(index=False).encode('utf-8')
             st.download_button(label="📥 Descargar CSV", data=csv, file_name=f'datos_{USER}.csv', mime='text/csv')
-            st.dataframe(df)
+            
+            st.markdown("---")
+            st.subheader("2. Corregir errores (Borrar día)")
+            st.warning("Selecciona una fecha para eliminar todos los registros de ese día. Luego podrás subirlos de nuevo correctamente.")
+            
+            # Formulario de borrado para evitar clicks accidentales
+            with st.form("delete_form"):
+                fechas_disponibles = sorted(df['Fecha'].unique(), reverse=True)
+                fecha_a_borrar = st.selectbox("Fecha a eliminar:", fechas_disponibles)
+                confirmar = st.checkbox("Confirmo que quiero borrar los datos de este día")
+                
+                if st.form_submit_button("Eliminar Registros 🗑️"):
+                    if confirmar:
+                        df_nuevo = df[df['Fecha'] != str(fecha_a_borrar)]
+                        df_nuevo.to_csv(DB, index=False)
+                        st.success(f"Datos del {fecha_a_borrar} eliminados. ¡Ya puedes volver a registrarlos!")
+                        st.rerun()
+                    else:
+                        st.error("Debes marcar la casilla de confirmación.")
+
+            st.markdown("---")
+            st.subheader("3. Vista previa")
+            st.dataframe(df.sort_values(by="Fecha", ascending=False))
         else:
-            st.info("No hay datos para exportar todavía.")
+            st.info("No hay datos todavía.")
