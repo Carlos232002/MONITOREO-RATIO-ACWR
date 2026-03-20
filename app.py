@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import base64
-import time # <-- NUEVO: Para el pequeño freno de seguridad
+import time
 from datetime import date, timedelta, datetime
 from io import BytesIO
 from PIL import Image
@@ -17,7 +17,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Inicializamos el controlador de cookies justo después de configurar la página
 controller = CookieController()
 
 # URL DIRECTA
@@ -26,13 +25,10 @@ URL_LOGO = "https://raw.githubusercontent.com/Carlos232002/MONITOREO-RATIO-ACWR/
 # --- 2. ESTILOS CSS ---
 st.markdown(f"""
     <style>
-    /* Fondo y colores generales */
     .main {{ background-color: #0e1117; color: #ffffff; }}
     .stMetric {{ background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; }}
     [data-testid="stSidebar"] {{ background-color: #161b22; }}
     h1, h2, h3 {{ color: #1E90FF; }}
-
-    /* ESTE ES EL SELECTOR NUEVO QUE NECESITAS */
     [data-testid="stSidebarNavContent"]::before {{
         content: "";
         display: block;
@@ -44,7 +40,6 @@ st.markdown(f"""
         background-repeat: no-repeat;
         background-position: center;
     }}
-
     .medal-box {{ 
         background-color: #1c2128; padding: 15px; border-radius: 12px; border: 2px solid #30363d; text-align: center; margin-bottom: 25px;
     }}
@@ -71,24 +66,22 @@ USERS = {
 }
 
 # --- 4. FUNCIONES DE APOYO ---
+
 def calcular_racha_y_medalla(df):
     if df.empty: return 0, "Estás en racha", "🌱"
     fechas = pd.to_datetime(df['Fecha']).dt.date.unique()
     fechas = sorted(fechas, reverse=True)
     racha = 0
     target = date.today()
-    
     if fechas and fechas[0] < target:
         if fechas[0] == target - timedelta(days=1):
             target = target - timedelta(days=1)
         else: return 0, "Estás en racha", "🌱"
-
     for f in fechas:
         if f == target:
             racha += 1
             target -= timedelta(days=1)
         else: break
-        
     if racha >= 180: return racha, "LEYENDA DIAMANTE", "💎"
     if racha >= 90: return racha, "MEDALLA DE ORO", "🥇"
     if racha >= 30: return racha, "MEDALLA DE PLATA", "🥈"
@@ -96,22 +89,44 @@ def calcular_racha_y_medalla(df):
     if racha >= 7: return racha, "MEDALLA DE CHOCOLATE", "🍫"
     return racha, "Estás en racha", "🌱"
 
+# NUEVA FUNCIÓN: Cálculo de ACWR mediante EWMA (Exponentially Weighted Moving Average)
+def calcular_acwr_ewma(df_user):
+    if df_user.empty: return 0.0, 0.0, 1.0
+    
+    # Preparar datos: Fechas a datetime y ordenar
+    df_user['Fecha'] = pd.to_datetime(df_user['Fecha'])
+    entrenos = df_user[df_user['Tipo'] == 'ENTRENO'].copy()
+    if entrenos.empty: return 0.0, 0.0, 1.0
+    
+    diario = entrenos.groupby('Fecha')['Carga'].sum().sort_index()
+    
+    # Crear rango desde el primer entreno hasta hoy para no tener huecos
+    rango_completo = pd.date_range(start=diario.index.min(), end=pd.to_datetime(date.today()))
+    diario = diario.reindex(rango_completo, fill_value=0)
+    
+    # Cálculo EWMA: Span 7 para Aguda, Span 28 para Crónica
+    # Usamos adjust=False para que sea una media exponencial real (fórmula recursiva)
+    aguda_serie = diario.ewm(span=7, adjust=False).mean()
+    cronica_serie = diario.ewm(span=28, adjust=False).mean()
+    
+    aguda_hoy = aguda_serie.iloc[-1]
+    cronica_hoy = cronica_serie.iloc[-1]
+    ratio = aguda_hoy / cronica_hoy if cronica_hoy > 0 else 1.0
+    
+    return aguda_hoy, cronica_hoy, ratio, aguda_serie, cronica_serie
+
 def check_password():
-    # --- NUEVO: Freno de seguridad para el Race Condition ---
     if "cookie_check_done" not in st.session_state:
-        time.sleep(0.5) # Le damos medio segundo al navegador móvil para reaccionar
+        time.sleep(0.5)
         st.session_state.cookie_check_done = True
         st.rerun()
 
     user_cookie = controller.get('user_session')
-    
-    # Si la cookie es válida, entramos directamente
     if user_cookie in USERS:
         if "authenticated" not in st.session_state:
             st.session_state.update({"authenticated": True, "user": user_cookie, "name": USERS[user_cookie][1], "groups": USERS[user_cookie][2], "db": f'database_{user_cookie}.csv'})
         return True
 
-    # Si no hay cookie, mostramos el login normal
     if "authenticated" not in st.session_state:
         st.title("🔐 Acceso Plataforma de Rendimiento")
         u = st.text_input("Usuario").lower().strip()
@@ -201,17 +216,15 @@ if check_password():
                     if os.path.exists(p_db):
                         d = pd.read_csv(p_db)
                         if not d.empty:
+                            # Cambio a motor EWMA en el ranking Staff
+                            _, _, ratio_ewma, _, _ = calcular_acwr_ewma(d)
                             d['Fecha'] = pd.to_datetime(d['Fecha']).dt.date
-                            diario = d[d['Tipo'] == 'ENTRENO'].groupby('Fecha')['Carga'].sum()
-                            aguda = diario.reindex(pd.date_range(hoy-timedelta(days=6), hoy).date, fill_value=0).mean()
-                            cronica = diario.reindex(pd.date_range(hoy-timedelta(days=27), hoy).date, fill_value=0).mean()
-                            ratio = aguda/cronica if cronica > 0 else 1.0
                             w_h = d[(d['Tipo'] == 'WELLNESS') & (d['Fecha'] == hoy)]
                             well_hoy = w_h[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).iloc[0] if not w_h.empty else 0
                             alerta = "🟢 OK"
-                            if ratio > 1.5: alerta = "🔴 RIESGO CARGA"
+                            if ratio_ewma > 1.5: alerta = "🔴 RIESGO CARGA"
                             elif well_hoy > 0 and well_hoy < 2.5: alerta = "🟡 WELLNESS BAJO"
-                            res_premium.append({"Atleta": info[1], "Wellness": round(float(well_hoy),1) if well_hoy > 0 else "Pendiente", "Ratio ACWR": round(ratio,2), "Estado": alerta})
+                            res_premium.append({"Atleta": info[1], "Wellness Hoy": round(float(well_hoy),1) if well_hoy > 0 else "Pendiente", "Ratio ACWR (EWMA)": round(ratio_ewma,2), "Estado": alerta})
                 if res_premium: st.dataframe(pd.DataFrame(res_premium), use_container_width=True)
             
             else:
@@ -237,23 +250,25 @@ if check_password():
         st.header(f"📊 Panel Pro: {NAME}")
         df = pd.read_csv(DB)
         if not df.empty:
+            # Uso del motor EWMA para el análisis individual
+            aguda, cronica, acwr, aguda_serie, cronica_serie = calcular_acwr_ewma(df)
+            
+            # Cálculo de monotonía (usamos los últimos 7 días reales para esto)
             df['Fecha'] = pd.to_datetime(df['Fecha']).dt.date
-            hoy = date.today()
-            diario = df[df['Tipo'] == 'ENTRENO'].groupby('Fecha')['Carga'].sum()
-            aguda_serie = diario.reindex(pd.date_range(hoy-timedelta(days=6), hoy).date, fill_value=0)
-            cronica_serie = diario.reindex(pd.date_range(hoy-timedelta(days=27), hoy).date, fill_value=0)
-            aguda, cronica = aguda_serie.mean(), cronica_serie.mean()
-            acwr = aguda / cronica if cronica > 0 else 1.0
-            mono = aguda_serie.mean() / aguda_serie.std() if aguda_serie.std() > 0 else 0
+            diario_simple = df[df['Tipo'] == 'ENTRENO'].groupby('Fecha')['Carga'].sum()
+            ultimos_7 = diario_simple.reindex(pd.date_range(date.today()-timedelta(days=6), date.today()).date, fill_value=0)
+            mono = ultimos_7.mean() / ultimos_7.std() if ultimos_7.std() > 0 else 0
+            
             c1, c2, c3 = st.columns(3)
             c1.metric("Monotonía", f"{mono:.2f}")
-            c2.metric("Ratio ACWR", f"{acwr:.2f}")
-            c3.metric("Carga Semanal", f"{int(aguda_serie.sum())}")
-            st.subheader("Gráfico Aguda vs Crónica")
+            c2.metric("Ratio ACWR (EWMA)", f"{acwr:.2f}")
+            c3.metric("Carga Aguda (EWMA)", f"{int(aguda)}")
+            
+            st.subheader("Gráfico Aguda vs Crónica (Modelo EWMA)")
             fig, ax = plt.subplots(figsize=(10, 4))
-            ax.plot(aguda_serie.index, [aguda]*len(aguda_serie), color='red', linestyle='--', label="Aguda")
-            ax.plot(cronica_serie.index, cronica_serie.values, color='cyan', alpha=0.5, label="Crónica")
-            ax.fill_between(aguda_serie.index, aguda_serie.values, color='red', alpha=0.2)
+            ax.plot(aguda_serie.index, aguda_serie.values, color='red', label="Carga Aguda (Fatiga)")
+            ax.plot(cronica_serie.index, cronica_serie.values, color='cyan', alpha=0.6, label="Carga Crónica (Forma)")
+            ax.fill_between(aguda_serie.index, aguda_serie.values, color='red', alpha=0.1)
             ax.legend(); st.pyplot(fig)
 
     elif menu == "📥 Gestión de Datos":
@@ -317,16 +332,15 @@ if check_password():
             * **Alerta (> 2.0):** Monotonía alta. Esto puede generar sobreentrenamiento (por falta de descanso) o estancamiento (porque el cuerpo se acostumbra y deja de mejorar).
             """)
 
-        with st.expander("⚖️ Ratio ACWR (Aguda vs Crónica)"):
+        with st.expander("⚖️ Ratio ACWR PRO (Aguda vs Crónica)"):
             st.write("""
-            Compara tu carga de la última semana contra tu media del mes para asegurar una progresión segura.
+            Esta es la herramienta estrella de la app. Compara tu fatiga reciente (**Carga Aguda**) con lo que tu cuerpo está acostumbrado a soportar (**Carga Crónica**).
             
-            * **Zona de Desentrenamiento (< 0.8):** Estás entrenando considerablemente menos de lo habitual. Puede haber riesgo de pérdida de forma o lesiones al reincorporar carga bruscamente.
-            * **Punto Dulce (0.8 - 1.3):** Carga de entrenamiento óptima. Progresión segura y mejora del rendimiento.
-            * **Zona de Peligro (> 1.5):** Riesgo crítico de lesión por exceso de carga.
+            **¿Qué tiene de especial nuestra versión PRO?**
+            Utilizamos el modelo **EWMA (Media Móvil Ponderada)**. A diferencia de las calculadoras básicas, nuestro sistema entiende que la fatiga no desaparece de un día para otro. Los entrenamientos más recientes tienen más peso, pero los esfuerzos de hace unos días siguen "sumando" de forma decreciente. 
             
-            **Sistema de Semáforos:**
-            * 🟢 **Verde (0.8 - 1.3):** Todo en orden. ¡Sigue así!
-            * 🟡 **Amarillo (1.3 - 1.5 o 0.5 - 0.8):** Precaución. Estamos en el límite del desentrenamiento o de la fatiga excesiva.
-            * 🔴 **Rojo (< 0.5 o > 1.5):** Alerta máxima. Riesgo muy elevado de lesión o desajuste total.
+            **Interpretación del Semáforo:**
+            * 🟢 **Punto Dulce (0.8 - 1.3):** Estás en el nivel óptimo. Tu progresión es segura y estás mejorando tu forma física.
+            * 🟡 **Zona de Precaución (1.3 - 1.5):** Estás apretando más de la cuenta. Revisa tu Wellness; si la fatiga es alta, descansa.
+            * 🔴 **Zona de Peligro (> 1.5 o < 0.5):** Riesgo crítico. Un ratio mayor a 1.5 aumenta el riesgo de lesión. Un ratio menor a 0.5 indica desentrenamiento extremo.
             """)
