@@ -7,6 +7,7 @@ import base64
 from datetime import date, timedelta, datetime
 from io import BytesIO
 from PIL import Image
+from streamlit_cookies_controller import CookieController # <-- NUEVO: Importación de cookies
 
 # --- 1. CONFIGURACIÓN ---
 st.set_page_config(
@@ -14,6 +15,9 @@ st.set_page_config(
     page_icon="logo_app.png", 
     layout="wide"
 )
+
+# Inicializamos el controlador de cookies justo después de configurar la página
+controller = CookieController() # <-- NUEVO: Inicialización
 
 # URL DIRECTA
 URL_LOGO = "https://raw.githubusercontent.com/Carlos232002/MONITOREO-RATIO-ACWR/main/logo_app.png"
@@ -92,12 +96,24 @@ def calcular_racha_y_medalla(df):
     return racha, "Estás en racha", "🌱"
 
 def check_password():
+    # --- NUEVO: Lógica del portero con cookies ---
+    user_cookie = controller.get('user_session')
+    
+    # Si la cookie es válida, entramos directamente
+    if user_cookie in USERS:
+        if "authenticated" not in st.session_state:
+            st.session_state.update({"authenticated": True, "user": user_cookie, "name": USERS[user_cookie][1], "groups": USERS[user_cookie][2], "db": f'database_{user_cookie}.csv'})
+        return True
+
+    # Si no hay cookie, mostramos el login normal
     if "authenticated" not in st.session_state:
         st.title("🔐 Acceso Plataforma de Rendimiento")
         u = st.text_input("Usuario").lower().strip()
         p = st.text_input("Contraseña", type="password")
         if st.button("Entrar"):
             if u in USERS and USERS[u][0] == p:
+                # Si acierta, le damos la cookie por 30 días (2592000 segundos)
+                controller.set('user_session', u, max_age=2592000)
                 st.session_state.update({"authenticated": True, "user": u, "name": USERS[u][1], "groups": USERS[u][2], "db": f'database_{u}.csv'})
                 st.rerun()
             else: st.error("Error de acceso.")
@@ -125,6 +141,13 @@ if check_password():
     """, unsafe_allow_html=True)
     
     menu = st.sidebar.radio("Navegación", ["🌅 Wellness (Salud)", "🏃‍♂️ Registrar Sesión", "🏆 Ranking del Grupo", "📊 Mi Análisis Pro", "📥 Gestión de Datos", "📖 Guía de Ayuda"])
+
+    # --- NUEVO: Botón de Cerrar Sesión en la barra lateral ---
+    st.sidebar.markdown("---")
+    if st.sidebar.button("🚪 Cerrar Sesión"):
+        controller.remove('user_session') # Matamos la cookie
+        st.session_state.clear()          # Borramos la memoria
+        st.rerun()                        # Recargamos la página
 
     if menu == "🌅 Wellness (Salud)":
         st.header("🌅 Cuestionario Wellness (Hooper)")
@@ -183,7 +206,7 @@ if check_password():
                             well_hoy = w_h[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).iloc[0] if not w_h.empty else 0
                             alerta = "🟢 OK"
                             if ratio > 1.5: alerta = "🔴 RIESGO CARGA"
-                            elif well_hoy > 0 and well_hoy < 2.5: alerta = "🟡 WELLNESS BAGO"
+                            elif well_hoy > 0 and well_hoy < 2.5: alerta = "🟡 WELLNESS BAJO"
                             res_premium.append({"Atleta": info[1], "Wellness": round(float(well_hoy),1) if well_hoy > 0 else "Pendiente", "Ratio ACWR": round(ratio,2), "Estado": alerta})
                 if res_premium: st.dataframe(pd.DataFrame(res_premium), use_container_width=True)
             
