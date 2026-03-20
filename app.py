@@ -4,10 +4,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import base64
+import time # <-- NUEVO: Para el pequeño freno de seguridad
 from datetime import date, timedelta, datetime
 from io import BytesIO
 from PIL import Image
-from streamlit_cookies_controller import CookieController # <-- NUEVO: Importación de cookies
+from streamlit_cookies_controller import CookieController
 
 # --- 1. CONFIGURACIÓN ---
 st.set_page_config(
@@ -17,12 +18,12 @@ st.set_page_config(
 )
 
 # Inicializamos el controlador de cookies justo después de configurar la página
-controller = CookieController() # <-- NUEVO: Inicialización
+controller = CookieController()
 
 # URL DIRECTA
 URL_LOGO = "https://raw.githubusercontent.com/Carlos232002/MONITOREO-RATIO-ACWR/main/logo_app.png"
 
-# --- 2. ESTILOS CSS (ACTUALIZADO PARA EL NUEVO STREAMLIT) ---
+# --- 2. ESTILOS CSS ---
 st.markdown(f"""
     <style>
     /* Fondo y colores generales */
@@ -96,7 +97,12 @@ def calcular_racha_y_medalla(df):
     return racha, "Estás en racha", "🌱"
 
 def check_password():
-    # --- NUEVO: Lógica del portero con cookies ---
+    # --- NUEVO: Freno de seguridad para el Race Condition ---
+    if "cookie_check_done" not in st.session_state:
+        time.sleep(0.5) # Le damos medio segundo al navegador móvil para reaccionar
+        st.session_state.cookie_check_done = True
+        st.rerun()
+
     user_cookie = controller.get('user_session')
     
     # Si la cookie es válida, entramos directamente
@@ -112,7 +118,6 @@ def check_password():
         p = st.text_input("Contraseña", type="password")
         if st.button("Entrar"):
             if u in USERS and USERS[u][0] == p:
-                # Si acierta, le damos la cookie por 30 días (2592000 segundos)
                 controller.set('user_session', u, max_age=2592000)
                 st.session_state.update({"authenticated": True, "user": u, "name": USERS[u][1], "groups": USERS[u][2], "db": f'database_{u}.csv'})
                 st.rerun()
@@ -142,12 +147,11 @@ if check_password():
     
     menu = st.sidebar.radio("Navegación", ["🌅 Wellness (Salud)", "🏃‍♂️ Registrar Sesión", "🏆 Ranking del Grupo", "📊 Mi Análisis Pro", "📥 Gestión de Datos", "📖 Guía de Ayuda"])
 
-    # --- NUEVO: Botón de Cerrar Sesión en la barra lateral ---
     st.sidebar.markdown("---")
     if st.sidebar.button("🚪 Cerrar Sesión"):
-        controller.remove('user_session') # Matamos la cookie
-        st.session_state.clear()          # Borramos la memoria
-        st.rerun()                        # Recargamos la página
+        controller.remove('user_session')
+        st.session_state.clear()
+        st.rerun()
 
     if menu == "🌅 Wellness (Salud)":
         st.header("🌅 Cuestionario Wellness (Hooper)")
