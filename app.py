@@ -89,10 +89,10 @@ def calcular_racha_y_medalla(df):
         else: break
         
     if racha >= 180: return racha, "LEYENDA DIAMANTE", "💎"
-    if racha >= 90: return racha, "TIGRE DE ORO", "🥇"
-    if racha >= 30: return racha, "ELITE DE PLATA", "🥈"
-    if racha >= 14: return racha, "CONSTANCIA BRONCE", "🥉"
-    if racha >= 7: return racha, "MÉRITO CHOCOLATE", "🍫"
+    if racha >= 90: return racha, "MEDALLA DE ORO", "🥇"
+    if racha >= 30: return racha, "MEDALLA DE PLATA", "🥈"
+    if racha >= 14: return racha, "MEDALLA DE BRONCE", "🥉"
+    if racha >= 7: return racha, "MEDALLA DE CHOCOLATE", "🍫"
     return racha, "Estás en racha", "🌱"
 
 def check_password():
