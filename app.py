@@ -15,10 +15,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# URL DIRECTA QUE YA SABEMOS QUE FUNCIONA
+# URL DIRECTA DE TU LOGO
 URL_LOGO = "https://raw.githubusercontent.com/Carlos232002/MONITOREO-RATIO-ACWR/main/logo_app.png"
 
-# --- 2. ESTILOS CSS (AQUÍ ESTABA EL ERROR) ---
+# --- 2. ESTILOS CSS ---
 st.markdown(f"""
     <style>
     /* Fondo y colores generales */
@@ -27,7 +27,7 @@ st.markdown(f"""
     [data-testid="stSidebar"] {{ background-color: #161b22; }}
     h1, h2, h3 {{ color: #1E90FF; }}
 
-    /* LOGO EN LA BARRA LATERAL - USANDO LA URL DIRECTA */
+    /* LOGO EN LA BARRA LATERAL */
     [data-testid="stSidebarNav"]::before {{
         content: "";
         display: block;
@@ -40,57 +40,15 @@ st.markdown(f"""
         background-position: center;
     }}
 
+    /* Caja de medallas */
     .medal-box {{ 
         background-color: #1c2128; padding: 15px; border-radius: 12px; border: 2px solid #30363d; text-align: center; margin-bottom: 25px;
     }}
     </style>
+    <link rel="apple-touch-icon" href="{URL_LOGO}">
     """, unsafe_allow_html=True)
 
-# --- 3. DICCIONARIO DE USUARIOS (TU CÓDIGO SIGUE AQUÍ...) ---
-
-# --- 2. ESTILOS Y LOGO EN SIDEBAR ---
-logo_style = f'url("data:image/png;base64,{logo_b64}")' if logo_b64 else 'url("https://raw.githubusercontent.com/Carlos232002/MONITOREO-RATIO-ACWR/main/logo_app.png")'
-
-# (A partir de aquí, el resto de tu código de estilos .markdown, etc., sigue igual)
-from datetime import date, timedelta, datetime
-from io import BytesIO
-from PIL import Image
-
-# --- 1. CONFIGURACIÓN Y LOGO ---
-st.set_page_config(
-    page_title="My Performance Journal", 
-    page_icon="logo_app.png", 
-    layout="wide"
-)
-def get_base64_logo(path):
-    if os.path.exists(path):
-        with open(path, "rb") as f:
-            return base64.b64encode(f.read()).decode()
-    return None
-
-logo_b64 = get_base64_logo("logo_app.png")
-logo_style = f'url("data:image/png;base64,{logo_b64}")' if logo_b64 else 'url("https://raw.githubusercontent.com/Carlos232002/MONITOREO-RATIO-ACWR/main/logo_app.png")'
-
-st.markdown(f"""
-    <style>
-    .main {{ background-color: #0e1117; color: #ffffff; }}
-    .stMetric {{ background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; }}
-    [data-testid="stSidebar"] {{ background-color: #161b22; }}
-    h1, h2, h3 {{ color: #1E90FF; }}
-    [data-testid="stSidebarNav"]::before {{
-        content: ""; display: block; margin: 20px auto; width: 100px; height: 100px;
-        background-image: {logo_style}; background-size: contain; background-repeat: no-repeat; background-position: center;
-    }}
-    .medal-box {{ 
-        background-color: #1c2128; 
-        padding: 15px; 
-        border-radius: 12px; 
-        border: 2px solid #30363d; 
-        text-align: center; 
-        margin-bottom: 25px;
-    }}
-    </style>
-    """, unsafe_allow_html=True)
+# --- 3. DICCIONARIO DE USUARIOS (TU CÓDIGO SIGUE ABAJO) ---
 
 # --- 2. DICCIONARIO DE USUARIOS ---
 USERS = {
