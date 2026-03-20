@@ -15,10 +15,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# URL DIRECTA DE TU LOGO
+# URL DIRECTA
 URL_LOGO = "https://raw.githubusercontent.com/Carlos232002/MONITOREO-RATIO-ACWR/main/logo_app.png"
 
-# --- 2. ESTILOS CSS ---
+# --- 2. ESTILOS CSS (ACTUALIZADO PARA EL NUEVO STREAMLIT) ---
 st.markdown(f"""
     <style>
     /* Fondo y colores generales */
@@ -27,26 +27,26 @@ st.markdown(f"""
     [data-testid="stSidebar"] {{ background-color: #161b22; }}
     h1, h2, h3 {{ color: #1E90FF; }}
 
-    /* LOGO EN LA BARRA LATERAL */
-    [data-testid="stSidebarNav"]::before {{
+    /* ESTE ES EL SELECTOR NUEVO QUE NECESITAS */
+    [data-testid="stSidebarNavContent"]::before {{
         content: "";
         display: block;
         margin: 20px auto;
-        width: 150px;
-        height: 150px;
+        width: 120px;
+        height: 120px;
         background-image: url("{URL_LOGO}");
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center;
     }}
 
-    /* Caja de medallas */
     .medal-box {{ 
         background-color: #1c2128; padding: 15px; border-radius: 12px; border: 2px solid #30363d; text-align: center; margin-bottom: 25px;
     }}
     </style>
-    <link rel="apple-touch-icon" href="{URL_LOGO}">
     """, unsafe_allow_html=True)
+
+# --- 3. DICCIONARIO DE USUARIOS (EL RESTO DE TU CÓDIGO AQUÍ) ---
 
 # --- 3. DICCIONARIO DE USUARIOS (TU CÓDIGO SIGUE ABAJO) ---
 
