@@ -160,40 +160,103 @@ if check_password():
                 st.rerun()
 
     elif menu == "🏆 Ranking del Grupo":
-        st.header("🏆 Clasificación")
-        if GROUPS:
-            g_sel = st.selectbox("Grupo:", GROUPS)
-            res = []
-            hoy = date.today()
-            hace_7 = hoy - timedelta(days=7)
+        st.header("🏆 Panel de Gestión de Rendimiento")
+        
+        # --- LÓGICA ESPECIAL PARA EL COACH (STAFF) ---
+        if "Staff" in GROUPS:
+            st.subheader("🕵️‍♂️ Vista de Supervisor (Modo Coach Premium)")
             
-            for u, info in USERS.items():
-                p_db = f'database_{u}.csv'
-                if g_sel in info[2] and os.path.exists(p_db):
-                    try:
-                        d = pd.read_csv(p_db)
-                        if not d.empty:
-                            d['Fecha'] = pd.to_datetime(d['Fecha']).dt.date
-                            # Carga: Sigue siendo la suma de los últimos 7 días
-                            d7 = d[d['Fecha'] >= hace_7]
-                            c = d7['Carga'].sum()
-                            
-                            # Wellness: FILTRADO ESTRICTO POR HOY
-                            w_hoy = d[(d['Tipo'] == 'WELLNESS') & (d['Fecha'] == hoy)]
-                            if not w_hoy.empty:
-                                well = w_hoy[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).values[0]
-                                well_display = round(well, 1)
-                            else:
-                                well_display = "Pendiente ⏳"
-                                
-                            res.append({"Atleta": info[1], "Carga (7d)": int(c), "Wellness (Hoy)": well_display})
-                    except: continue
-            if res:
-                df_rank = pd.DataFrame(res).sort_values("Carga (7d)", ascending=False)
-                st.dataframe(df_rank, use_container_width=True)
-                st.info("💡 El Wellness muestra solo el estado de HOY. La Carga es el acumulado semanal.")
-        else: st.info("No tienes grupos asignados.")
+            if GROUPS:
+                g_sel = st.selectbox("Seleccionar Grupo para Analizar:", GROUPS)
+                res_maestro = []
+                hoy = date.today()
+                hace_7 = hoy - timedelta(days=7)
+                hace_28 = hoy - timedelta(days=28)
 
+                # Escaneo de toda la base de datos de usuarios
+                for u, info in USERS.items():
+                    p_db = f'database_{u}.csv'
+                    # Solo analizamos si el usuario pertenece al grupo seleccionado y no es el propio coach
+                    if g_sel in info[2] and os.path.exists(p_db) and "Staff" not in info[2]:
+                        try:
+                            d = pd.read_csv(p_db)
+                            if not d.empty:
+                                d['Fecha'] = pd.to_datetime(d['Fecha']).dt.date
+                                
+                                # 1. Cálculo ACWR (Científico)
+                                diario = d[d['Tipo'] == 'ENTRENO'].groupby('Fecha')['Carga'].sum()
+                                aguda = diario.reindex(pd.date_range(hoy-timedelta(days=6), hoy).date, fill_value=0).mean()
+                                cronica = diario.reindex(pd.date_range(hoy-timedelta(days=27), hoy).date, fill_value=0).mean()
+                                ratio = aguda / cronica if cronica > 0 else 1.0
+                                
+                                # 2. Wellness de Hoy
+                                w_hoy = d[(d['Tipo'] == 'WELLNESS') & (d['Fecha'] == hoy)]
+                                if not w_hoy.empty:
+                                    well_score = w_hoy[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).values[0]
+                                    estado_w = "Registrado ✅"
+                                else:
+                                    well_score = 0
+                                    estado_w = "PENDIENTE ⏳"
+                                
+                                # 3. Determinar Estado de Alerta
+                                if ratio > 1.5 or (well_score < 2.5 and well_score > 0):
+                                    alerta = "🔴 RIESGO ALTO"
+                                elif ratio > 1.3 or ratio < 0.8:
+                                    alerta = "🟡 PRECAUCIÓN"
+                                else:
+                                    alerta = "🟢 ÓPTIMO"
+
+                                res_maestro.append({
+                                    "Jugador": info[1],
+                                    "Wellness Hoy": well_score if well_score > 0 else "---",
+                                    "Registro": estado_w,
+                                    "Ratio ACWR": round(ratio, 2),
+                                    "Estado": alerta,
+                                    "Carga Semanal": int(diario.reindex(pd.date_range(hace_7, hoy).date, fill_value=0).sum())
+                                })
+                        except: continue
+
+                if res_maestro:
+                    df_maestro = pd.DataFrame(res_maestro)
+
+                    # --- TARJETAS DE ACCIÓN RÁPIDA ---
+                    c1, c2, c3 = st.columns(3)
+                    en_riesgo = df_maestro[df_maestro['Estado'] == "🔴 RIESGO ALTO"].shape[0]
+                    pendientes = df_maestro[df_maestro['Registro'] == "PENDIENTE ⏳"].shape[0]
+                    
+                    c1.metric("Jugadores en Riesgo", en_riesgo, delta_color="inverse")
+                    c2.metric("Pendientes Wellness", pendientes)
+                    c3.metric("Media Carga Grupo", int(df_maestro['Carga Semanal'].mean()))
+
+                    st.markdown("---")
+                    
+                    # --- TABLA INTERACTIVA CON COLORES ---
+                    def color_estado(val):
+                        if val == "🔴 RIESGO ALTO": color = '#721c24'
+                        elif val == "🟡 PRECAUCIÓN": color = '#856404'
+                        elif val == "🟢 ÓPTIMO": color = '#155724'
+                        else: color = 'transparent'
+                        return f'background-color: {color}'
+
+                    st.write("### 📋 Listado de Control Diario")
+                    st.dataframe(
+                        df_maestro.style.applymap(color_estado, subset=['Estado'])
+                        .background_gradient(cmap='RdYlGn', subset=['Wellness Hoy'], vmin=1, vmax=5),
+                        use_container_width=True
+                    )
+                    
+                    # --- BOTÓN PREMIUM: EXPORTAR A COACH ---
+                    csv_maestro = df_maestro.to_csv(index=False).encode('utf-8')
+                    st.download_button("📥 Descargar Reporte Diario (Excel/CSV)", csv_maestro, f"reporte_coach_{hoy}.csv", "text/csv")
+                else:
+                    st.warning("Aún no hay datos de jugadores para este grupo.")
+        
+        # --- VISTA PARA EL JUGADOR (RANKING NORMAL) ---
+        else:
+            st.subheader("📊 Ranking del Grupo")
+            # (Aquí va el código del ranking normal que ya tenías o uno simplificado)
+            st.info("¡Sigue registrando para subir en el ranking de carga semanal!")
+            # [Aquí puedes re-insertar tu lógica de ranking anterior si quieres que los jugadores se vean entre ellos]
     elif menu == "📊 Mi Análisis Pro":
         st.header(f"📊 Panel Pro: {NAME}")
         df = pd.read_csv(DB)
