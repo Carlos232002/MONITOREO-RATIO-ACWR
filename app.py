@@ -8,30 +8,16 @@ from datetime import date, timedelta, datetime
 from io import BytesIO
 from PIL import Image
 
-# --- 1. CONFIGURACIÓN Y LOGO PERSONALIZADO ---
+# --- 1. CONFIGURACIÓN Y LOGO DIRECTO DE GITHUB ---
 st.set_page_config(
     page_title="My Performance Journal", 
     page_icon="logo_app.png", 
     layout="wide"
 )
 
-# Función para cargar tu logo local (logo_app.png)
-def get_base64_logo(path):
-    if os.path.exists(path):
-        with open(path, "rb") as f:
-            return base64.b64encode(f.read()).decode()
-    return None
-
-logo_b64 = get_base64_logo("logo_app.png")
-
-# Ruta de respaldo en GitHub (Asegúrate de que esta URL sea la de tu repo real)
-URL_LOGO_GITHUB = "https://raw.githubusercontent.com/Carlos232002/MONITOREO-RATIO-ACWR/main/logo_app.png"
-
-# Definimos qué imagen usar para el estilo CSS
-if logo_b64:
-    img_src = f"data:image/png;base64,{logo_b64}"
-else:
-    img_src = URL_LOGO_GITHUB
+# --- ¡ESTA ES LA CLAVE! USA LA URL DIRECTA QUE TÚ SABES QUE FUNCIONA ---
+# Asegúrate de que esta URL es EXACTAMENTE la que copiaste al hacer clic derecho en GitHub -> "Copiar dirección de imagen"
+URL_LOGO_DIRECTA = "https://raw.githubusercontent.com/Carlos232002/MONITOREO-RATIO-ACWR/main/logo_app.png"
 
 st.markdown(f"""
     <style>
@@ -48,7 +34,8 @@ st.markdown(f"""
         margin: 20px auto;
         width: 150px; 
         height: 150px;
-        background-image: url("{img_src}");
+        /* Usamos la URL directa aquí */
+        background-image: url("{URL_LOGO_DIRECTA}");
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center;
@@ -65,10 +52,6 @@ st.markdown(f"""
     }}
     </style>
     """, unsafe_allow_html=True)
-
-# --- TRUCO PARA EL ICONO EN IPHONE (USANDO TU LOGO) ---
-if logo_b64:
-    st.markdown(f'<link rel="apple-touch-icon" href="data:image/png;base64,{logo_b64}">', unsafe_allow_html=True)
 
 
 # --- 2. ESTILOS Y LOGO EN SIDEBAR ---
