@@ -8,17 +8,17 @@ from datetime import date, timedelta, datetime
 from io import BytesIO
 from PIL import Image
 
-# --- 1. CONFIGURACIÓN Y LOGO DIRECTO DE GITHUB ---
+# --- 1. CONFIGURACIÓN ---
 st.set_page_config(
     page_title="My Performance Journal", 
     page_icon="logo_app.png", 
     layout="wide"
 )
 
-# --- ¡ESTA ES LA CLAVE! USA LA URL DIRECTA QUE TÚ SABES QUE FUNCIONA ---
-# Asegúrate de que esta URL es EXACTAMENTE la que copiaste al hacer clic derecho en GitHub -> "Copiar dirección de imagen"
-URL_LOGO_DIRECTA = "https://raw.githubusercontent.com/Carlos232002/MONITOREO-RATIO-ACWR/main/logo_app.png"
+# URL DIRECTA QUE YA SABEMOS QUE FUNCIONA
+URL_LOGO = "https://raw.githubusercontent.com/Carlos232002/MONITOREO-RATIO-ACWR/main/logo_app.png"
 
+# --- 2. ESTILOS CSS (AQUÍ ESTABA EL ERROR) ---
 st.markdown(f"""
     <style>
     /* Fondo y colores generales */
@@ -27,32 +27,26 @@ st.markdown(f"""
     [data-testid="stSidebar"] {{ background-color: #161b22; }}
     h1, h2, h3 {{ color: #1E90FF; }}
 
-    /* Inserción de TU LOGO en la parte superior del menú lateral */
+    /* LOGO EN LA BARRA LATERAL - USANDO LA URL DIRECTA */
     [data-testid="stSidebarNav"]::before {{
         content: "";
         display: block;
         margin: 20px auto;
-        width: 150px; 
+        width: 150px;
         height: 150px;
-        /* Usamos la URL directa aquí */
-        background-image: url("{URL_LOGO_DIRECTA}");
+        background-image: url("{URL_LOGO}");
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center;
     }}
 
-    /* Caja de medallas personalizada */
     .medal-box {{ 
-        background-color: #1c2128; 
-        padding: 15px; 
-        border-radius: 12px; 
-        border: 2px solid #30363d; 
-        text-align: center; 
-        margin-bottom: 25px;
+        background-color: #1c2128; padding: 15px; border-radius: 12px; border: 2px solid #30363d; text-align: center; margin-bottom: 25px;
     }}
     </style>
     """, unsafe_allow_html=True)
 
+# --- 3. DICCIONARIO DE USUARIOS (TU CÓDIGO SIGUE AQUÍ...) ---
 
 # --- 2. ESTILOS Y LOGO EN SIDEBAR ---
 logo_style = f'url("data:image/png;base64,{logo_b64}")' if logo_b64 else 'url("https://raw.githubusercontent.com/Carlos232002/MONITOREO-RATIO-ACWR/main/logo_app.png")'
