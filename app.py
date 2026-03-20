@@ -162,33 +162,66 @@ if check_password():
     elif menu == "🏆 Ranking del Grupo":
         st.header("🏆 Clasificación")
         if GROUPS:
-            g_sel = st.selectbox("Grupo:", GROUPS)
-            res = []
-            hoy = date.today()
-            hace_7 = hoy - timedelta(days=7)
-            for u, info in USERS.items():
-                p_db = f'database_{u}.csv'
-                if g_sel in info[2] and os.path.exists(p_db):
-                    try:
+            g_sel = st.selectbox("Seleccionar Grupo para visualizar:", GROUPS)
+            
+            # --- LÓGICA COACH PREMIUM SOLO PARA GRUPO STAFF ---
+            if g_sel == "Staff":
+                st.subheader("🕵️ Panel Maestro (Staff Only)")
+                res_premium = []
+                hoy = date.today()
+                # Analizamos a todos los usuarios del sistema para el Coach
+                for u_id, info in USERS.items():
+                    if "Staff" in info[2]: continue # No mostrar a otros coaches en la lista de atletas
+                    p_db = f'database_{u_id}.csv'
+                    if os.path.exists(p_db):
                         d = pd.read_csv(p_db)
                         if not d.empty:
                             d['Fecha'] = pd.to_datetime(d['Fecha']).dt.date
-                            # Carga de los últimos 7 días
-                            c = d[d['Fecha'] >= hace_7]['Carga'].sum()
-                            # Wellness de HOY específicamente
-                            w_hoy = d[(d['Tipo'] == 'WELLNESS') & (d['Fecha'] == hoy)]
-                            if not w_hoy.empty:
-                                well_val = w_hoy[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).iloc[0]
-                                well_display = round(float(well_val), 1)
-                            else:
-                                well_display = "Pendiente ⏳"
+                            # Cálculo ACWR
+                            diario = d[d['Tipo'] == 'ENTRENO'].groupby('Fecha')['Carga'].sum()
+                            aguda = diario.reindex(pd.date_range(hoy-timedelta(days=6), hoy).date, fill_value=0).mean()
+                            cronica = diario.reindex(pd.date_range(hoy-timedelta(days=27), hoy).date, fill_value=0).mean()
+                            ratio = aguda/cronica if cronica > 0 else 1.0
+                            # Wellness Hoy
+                            w_h = d[(d['Tipo'] == 'WELLNESS') & (d['Fecha'] == hoy)]
+                            well_hoy = w_h[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).iloc[0] if not w_h.empty else 0
                             
-                            res.append({"Atleta": info[1], "Carga (7d)": int(c), "Wellness Hoy": well_display})
-                    except: continue
-            if res:
-                df_rank = pd.DataFrame(res).sort_values("Carga (7d)", ascending=False)
-                st.dataframe(df_rank, use_container_width=True)
-        else: st.info("No tienes grupos asignados.")
+                            alerta = "🟢 OK"
+                            if ratio > 1.5: alerta = "🔴 RIESGO CARGA"
+                            elif well_hoy > 0 and well_hoy < 2.5: alerta = "🟡 WELLNESS BAJO"
+                            
+                            res_premium.append({
+                                "Atleta": info[1], 
+                                "Wellness": round(float(well_hoy),1) if well_hoy > 0 else "Pendiente", 
+                                "Ratio ACWR": round(ratio,2), 
+                                "Estado": alerta
+                            })
+                if res_premium:
+                    st.dataframe(pd.DataFrame(res_premium), use_container_width=True)
+                else:
+                    st.info("No hay datos de atletas disponibles.")
+            
+            # --- RANKING NORMAL PARA OTROS GRUPOS ---
+            else:
+                res = []
+                hoy = date.today()
+                hace_7 = hoy - timedelta(days=7)
+                for u, info in USERS.items():
+                    p_db = f'database_{u}.csv'
+                    if g_sel in info[2] and os.path.exists(p_db):
+                        try:
+                            d = pd.read_csv(p_db)
+                            if not d.empty:
+                                d['Fecha'] = pd.to_datetime(d['Fecha']).dt.date
+                                c = d[d['Fecha'] >= hace_7]['Carga'].sum()
+                                w_hoy = d[(d['Tipo'] == 'WELLNESS') & (d['Fecha'] == hoy)]
+                                well_display = round(float(w_hoy[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).iloc[0]), 1) if not w_hoy.empty else "Pendiente ⏳"
+                                res.append({"Atleta": info[1], "Carga (7d)": int(c), "Wellness Hoy": well_display})
+                        except: continue
+                if res:
+                    st.dataframe(pd.DataFrame(res).sort_values("Carga (7d)", ascending=False), use_container_width=True)
+        else:
+            st.info("No tienes grupos asignados.")
 
     elif menu == "📊 Mi Análisis Pro":
         st.header(f"📊 Panel Pro: {NAME}")
