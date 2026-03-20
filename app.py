@@ -46,10 +46,6 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. DICCIONARIO DE USUARIOS (EL RESTO DE TU CÓDIGO AQUÍ) ---
-
-# --- 3. DICCIONARIO DE USUARIOS (TU CÓDIGO SIGUE ABAJO) ---
-
 # --- 2. DICCIONARIO DE USUARIOS ---
 USERS = {
     "carlos": ["cafyd2026", "Carlos (Coach)", ["Staff", "Tigres", "Familia"]],
@@ -168,7 +164,9 @@ if check_password():
         if GROUPS:
             g_sel = st.selectbox("Grupo:", GROUPS)
             res = []
-            hace_7 = date.today() - timedelta(days=7)
+            hoy = date.today()
+            hace_7 = hoy - timedelta(days=7)
+            
             for u, info in USERS.items():
                 p_db = f'database_{u}.csv'
                 if g_sel in info[2] and os.path.exists(p_db):
@@ -176,15 +174,24 @@ if check_password():
                         d = pd.read_csv(p_db)
                         if not d.empty:
                             d['Fecha'] = pd.to_datetime(d['Fecha']).dt.date
+                            # Carga: Sigue siendo la suma de los últimos 7 días
                             d7 = d[d['Fecha'] >= hace_7]
                             c = d7['Carga'].sum()
-                            w_df = d7[d7['Tipo'] == 'WELLNESS']
-                            well = w_df[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).mean() if not w_df.empty else 0
-                            res.append({"Atleta": info[1], "Carga": int(c), "Wellness": round(well,1)})
+                            
+                            # Wellness: FILTRADO ESTRICTO POR HOY
+                            w_hoy = d[(d['Tipo'] == 'WELLNESS') & (d['Fecha'] == hoy)]
+                            if not w_hoy.empty:
+                                well = w_hoy[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).values[0]
+                                well_display = round(well, 1)
+                            else:
+                                well_display = "Pendiente ⏳"
+                                
+                            res.append({"Atleta": info[1], "Carga (7d)": int(c), "Wellness (Hoy)": well_display})
                     except: continue
             if res:
-                df_rank = pd.DataFrame(res).sort_values("Carga", ascending=False)
-                st.dataframe(df_rank.style.background_gradient(cmap='RdYlGn', subset=['Wellness'], vmin=1, vmax=5), use_container_width=True)
+                df_rank = pd.DataFrame(res).sort_values("Carga (7d)", ascending=False)
+                st.dataframe(df_rank, use_container_width=True)
+                st.info("💡 El Wellness muestra solo el estado de HOY. La Carga es el acumulado semanal.")
         else: st.info("No tienes grupos asignados.")
 
     elif menu == "📊 Mi Análisis Pro":
