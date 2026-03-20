@@ -164,7 +164,6 @@ if check_password():
         if GROUPS:
             g_sel = st.selectbox("Seleccionar Grupo para visualizar:", GROUPS)
             
-            # --- LÓGICA COACH PREMIUM SOLO PARA GRUPO STAFF ---
             if g_sel == "Staff":
                 st.subheader("🕵️ Panel Maestro (Staff Only)")
                 res_premium = []
@@ -184,11 +183,10 @@ if check_password():
                             well_hoy = w_h[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).iloc[0] if not w_h.empty else 0
                             alerta = "🟢 OK"
                             if ratio > 1.5: alerta = "🔴 RIESGO CARGA"
-                            elif well_hoy > 0 and well_hoy < 2.5: alerta = "🟡 WELLNESS BAJO"
+                            elif well_hoy > 0 and well_hoy < 2.5: alerta = "🟡 WELLNESS BAGO"
                             res_premium.append({"Atleta": info[1], "Wellness": round(float(well_hoy),1) if well_hoy > 0 else "Pendiente", "Ratio ACWR": round(ratio,2), "Estado": alerta})
                 if res_premium: st.dataframe(pd.DataFrame(res_premium), use_container_width=True)
             
-            # --- RANKING NORMAL (JUGADORES VEN NOTAS AHORA) ---
             else:
                 res = []
                 hoy = date.today()
@@ -202,10 +200,7 @@ if check_password():
                                 d['Fecha'] = pd.to_datetime(d['Fecha']).dt.date
                                 c = d[d['Fecha'] >= hace_7]['Carga'].sum()
                                 w_hoy = d[(d['Tipo'] == 'WELLNESS') & (d['Fecha'] == hoy)]
-                                if not w_hoy.empty:
-                                    well_display = round(float(w_hoy[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).iloc[0]), 1)
-                                else:
-                                    well_display = "Pendiente ⏳"
+                                well_display = round(float(w_hoy[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).iloc[0]), 1) if not w_hoy.empty else "Pendiente ⏳"
                                 res.append({"Atleta": info[1], "Carga (7d)": int(c), "Wellness Hoy": well_display})
                         except: continue
                 if res: st.dataframe(pd.DataFrame(res).sort_values("Carga (7d)", ascending=False), use_container_width=True)
@@ -257,8 +252,11 @@ if check_password():
 
     elif menu == "📖 Guía de Ayuda":
         st.header("📖 Guía de Interpretación de Datos")
+        
         with st.expander("🏅 Sistema de Medallas (Tu Compromiso)", expanded=True):
             st.write("""
+            **La disciplina y el compromiso diario son los pilares que sustentan tu rendimiento a largo plazo.** Este sistema premia tu rigor al registrar tus datos:
+            
             | Medalla | Racha Requerida | Significado |
             | :--- | :--- | :--- |
             | 🍫 **Chocolate** | **7 Días** | ¡Buen comienzo! Has superado la barrera de la primera semana. |
@@ -266,10 +264,42 @@ if check_password():
             | 🥈 **Plata** | **30 Días** | Compromiso de Élite. Un mes entero sin fallar denota mentalidad profesional. |
             | 🥇 **Oro** | **90 Días** | Disciplina de Tigre. Máximo nivel de rigor y seriedad con tu salud. |
             | 💎 **Diamante** | **180 Días** | Leyenda del Club. Referente absoluto de compromiso para todo el grupo. |
+            
+            *⚠️ **Importante:** La racha se mantiene simplemente registrando el Wellness. Si olvidas registrar tus datos un día entero, el contador volverá a cero.*
             """)
+
         with st.expander("🌅 Cuestionario Wellness (Método Hooper)"):
-            st.write("El **Wellness** indica tu capacidad de recuperación (5 es óptimo, 1 es crítico).")
+            st.write("""
+            El **Wellness** indica tu capacidad de recuperación. Evaluamos 5 ítems de 1 a 5 (**5 es óptimo**, 1 es crítico):
+            
+            * **Calidad del Sueño:** Evalúa si el descanso ha sido reparador y profundo.
+            * **Nivel de Estrés:** Refleja la carga mental o tensiones externas al entrenamiento.
+            * **Fatiga Percibida:** Sensación general de cansancio o falta de energía.
+            * **Dolor Muscular (DOMS):** Presencia de agujetas o molestias musculares específicas.
+            * **Estado de Ánimo:** Tu predisposición psicológica y motivación para afrontar el día.
+            
+            *Mantener una media alta en estos valores asegura que estás asimilando bien el trabajo.*
+            """)
+            
         with st.expander("📉 Monotonía (Variabilidad de la Carga)"):
-            st.write("Mide si tus cargas son muy similares día tras día.")
+            st.write("""
+            Mide si tus cargas son muy similares día tras día. La variabilidad es necesaria para que el cuerpo progrese.
+            
+            * **Valores Óptimos (< 1.5):** Indica que hay buena alternancia entre días intensos y de recuperación.
+            * **Zona de Riesgo (1.5 - 2.0):** Empiezas a perder variabilidad; presta atención a tu descanso.
+            * **Alerta (> 2.0):** Monotonía alta. Esto puede generar sobreentrenamiento (por falta de descanso) o estancamiento (porque el cuerpo se acostumbra y deja de mejorar).
+            """)
+
         with st.expander("⚖️ Ratio ACWR (Aguda vs Crónica)"):
-            st.write("Compara tu carga de la última semana contra tu media del mes.")
+            st.write("""
+            Compara tu carga de la última semana contra tu media del mes para asegurar una progresión segura.
+            
+            * **Zona de Desentrenamiento (< 0.8):** Estás entrenando considerablemente menos de lo habitual. Puede haber riesgo de pérdida de forma o lesiones al reincorporar carga bruscamente.
+            * **Punto Dulce (0.8 - 1.3):** Carga de entrenamiento óptima. Progresión segura y mejora del rendimiento.
+            * **Zona de Peligro (> 1.5):** Riesgo crítico de lesión por exceso de carga.
+            
+            **Sistema de Semáforos:**
+            * 🟢 **Verde (0.8 - 1.3):** Todo en orden. ¡Sigue así!
+            * 🟡 **Amarillo (1.3 - 1.5 o 0.5 - 0.8):** Precaución. Estamos en el límite del desentrenamiento o de la fatiga excesiva.
+            * 🔴 **Rojo (< 0.5 o > 1.5):** Alerta máxima. Riesgo muy elevado de lesión o desajuste total.
+            """)
