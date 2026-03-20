@@ -125,8 +125,7 @@ if check_password():
     """, unsafe_allow_html=True)
     
     menu = st.sidebar.radio("Navegación", ["🌅 Wellness (Salud)", "🏃‍♂️ Registrar Sesión", "🏆 Ranking del Grupo", "📊 Mi Análisis Pro", "📥 Gestión de Datos", "📖 Guía de Ayuda"])
-
-    if menu == "🌅 Wellness (Salud)":
+if menu == "🌅 Wellness (Salud)":
         st.header("🌅 Cuestionario Wellness (Hooper)")
         with st.form("w_form"):
             f_w = st.date_input("Fecha", value=date.today())
@@ -159,7 +158,7 @@ if check_password():
                 st.success("Actividad registrada.")
                 st.rerun()
 
-elif menu == "🏆 Ranking del Grupo":
+    elif menu == "🏆 Ranking del Grupo":
         st.header("🏆 Panel de Gestión de Rendimiento")
         if "Staff" in GROUPS:
             st.subheader("🕵️‍♂️ Vista de Supervisor (Modo Coach Premium)")
@@ -229,7 +228,6 @@ elif menu == "🏆 Ranking del Grupo":
             ax.fill_between(aguda_serie.index, aguda_serie.values, color='red', alpha=0.2)
             ax.legend()
             st.pyplot(fig)
-
     elif menu == "📥 Gestión de Datos":
         st.header("📥 Gestión de Datos")
         df = pd.read_csv(DB)
