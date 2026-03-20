@@ -8,14 +8,14 @@ from datetime import date, timedelta, datetime
 from io import BytesIO
 from PIL import Image
 
-# --- 1. CONFIGURACIÓN Y TRUCO PARA EL ICONO EN IPHONE (SAFARI) ---
+# --- 1. CONFIGURACIÓN Y LOGO PERSONALIZADO ---
 st.set_page_config(
     page_title="My Performance Journal", 
-    page_icon="logo_app.png",  # Este es para navegadores web
+    page_icon="logo_app.png", 
     layout="wide"
 )
 
-# He movido la función del logo aquí arriba para poder usarla antes
+# Función para cargar tu logo local (logo_app.png)
 def get_base64_logo(path):
     if os.path.exists(path):
         with open(path, "rb") as f:
@@ -24,10 +24,51 @@ def get_base64_logo(path):
 
 logo_b64 = get_base64_logo("logo_app.png")
 
-# --- ¡ESTA ES LA LÍNEA MÁGICA PARA QUE SAFARI USE TU LOGO DE GITHUB! ---
+# Ruta de respaldo en GitHub (Asegúrate de que esta URL sea la de tu repo real)
+URL_LOGO_GITHUB = "https://raw.githubusercontent.com/Carlos232002/MONITOREO-RATIO-ACWR/main/logo_app.png"
+
+# Definimos qué imagen usar para el estilo CSS
+if logo_b64:
+    img_src = f"data:image/png;base64,{logo_b64}"
+else:
+    img_src = URL_LOGO_GITHUB
+
+st.markdown(f"""
+    <style>
+    /* Fondo y colores generales */
+    .main {{ background-color: #0e1117; color: #ffffff; }}
+    .stMetric {{ background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; }}
+    [data-testid="stSidebar"] {{ background-color: #161b22; }}
+    h1, h2, h3 {{ color: #1E90FF; }}
+
+    /* Inserción de TU LOGO en la parte superior del menú lateral */
+    [data-testid="stSidebarNav"]::before {{
+        content: "";
+        display: block;
+        margin: 20px auto;
+        width: 150px; 
+        height: 150px;
+        background-image: url("{img_src}");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+    }}
+
+    /* Caja de medallas personalizada */
+    .medal-box {{ 
+        background-color: #1c2128; 
+        padding: 15px; 
+        border-radius: 12px; 
+        border: 2px solid #30363d; 
+        text-align: center; 
+        margin-bottom: 25px;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- TRUCO PARA EL ICONO EN IPHONE (USANDO TU LOGO) ---
 if logo_b64:
     st.markdown(f'<link rel="apple-touch-icon" href="data:image/png;base64,{logo_b64}">', unsafe_allow_html=True)
-# ----------------------------------------------------------------------
 
 
 # --- 2. ESTILOS Y LOGO EN SIDEBAR ---
