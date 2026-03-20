@@ -169,39 +169,26 @@ if check_password():
                 st.subheader("🕵️ Panel Maestro (Staff Only)")
                 res_premium = []
                 hoy = date.today()
-                # Analizamos a todos los usuarios del sistema para el Coach
                 for u_id, info in USERS.items():
-                    if "Staff" in info[2]: continue # No mostrar a otros coaches en la lista de atletas
+                    if "Staff" in info[2]: continue 
                     p_db = f'database_{u_id}.csv'
                     if os.path.exists(p_db):
                         d = pd.read_csv(p_db)
                         if not d.empty:
                             d['Fecha'] = pd.to_datetime(d['Fecha']).dt.date
-                            # Cálculo ACWR
                             diario = d[d['Tipo'] == 'ENTRENO'].groupby('Fecha')['Carga'].sum()
                             aguda = diario.reindex(pd.date_range(hoy-timedelta(days=6), hoy).date, fill_value=0).mean()
                             cronica = diario.reindex(pd.date_range(hoy-timedelta(days=27), hoy).date, fill_value=0).mean()
                             ratio = aguda/cronica if cronica > 0 else 1.0
-                            # Wellness Hoy
                             w_h = d[(d['Tipo'] == 'WELLNESS') & (d['Fecha'] == hoy)]
                             well_hoy = w_h[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).iloc[0] if not w_h.empty else 0
-                            
                             alerta = "🟢 OK"
                             if ratio > 1.5: alerta = "🔴 RIESGO CARGA"
                             elif well_hoy > 0 and well_hoy < 2.5: alerta = "🟡 WELLNESS BAJO"
-                            
-                            res_premium.append({
-                                "Atleta": info[1], 
-                                "Wellness": round(float(well_hoy),1) if well_hoy > 0 else "Pendiente", 
-                                "Ratio ACWR": round(ratio,2), 
-                                "Estado": alerta
-                            })
-                if res_premium:
-                    st.dataframe(pd.DataFrame(res_premium), use_container_width=True)
-                else:
-                    st.info("No hay datos de atletas disponibles.")
+                            res_premium.append({"Atleta": info[1], "Wellness": round(float(well_hoy),1) if well_hoy > 0 else "Pendiente", "Ratio ACWR": round(ratio,2), "Estado": alerta})
+                if res_premium: st.dataframe(pd.DataFrame(res_premium), use_container_width=True)
             
-            # --- RANKING NORMAL PARA OTROS GRUPOS ---
+            # --- RANKING NORMAL (JUGADORES VEN NOTAS AHORA) ---
             else:
                 res = []
                 hoy = date.today()
@@ -215,13 +202,14 @@ if check_password():
                                 d['Fecha'] = pd.to_datetime(d['Fecha']).dt.date
                                 c = d[d['Fecha'] >= hace_7]['Carga'].sum()
                                 w_hoy = d[(d['Tipo'] == 'WELLNESS') & (d['Fecha'] == hoy)]
-                                well_display = round(float(w_hoy[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).iloc[0]), 1) if not w_hoy.empty else "Pendiente ⏳"
+                                if not w_hoy.empty:
+                                    well_display = round(float(w_hoy[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).iloc[0]), 1)
+                                else:
+                                    well_display = "Pendiente ⏳"
                                 res.append({"Atleta": info[1], "Carga (7d)": int(c), "Wellness Hoy": well_display})
                         except: continue
-                if res:
-                    st.dataframe(pd.DataFrame(res).sort_values("Carga (7d)", ascending=False), use_container_width=True)
-        else:
-            st.info("No tienes grupos asignados.")
+                if res: st.dataframe(pd.DataFrame(res).sort_values("Carga (7d)", ascending=False), use_container_width=True)
+        else: st.info("No tienes grupos asignados.")
 
     elif menu == "📊 Mi Análisis Pro":
         st.header(f"📊 Panel Pro: {NAME}")
@@ -235,19 +223,16 @@ if check_password():
             aguda, cronica = aguda_serie.mean(), cronica_serie.mean()
             acwr = aguda / cronica if cronica > 0 else 1.0
             mono = aguda_serie.mean() / aguda_serie.std() if aguda_serie.std() > 0 else 0
-            
             c1, c2, c3 = st.columns(3)
             c1.metric("Monotonía", f"{mono:.2f}")
             c2.metric("Ratio ACWR", f"{acwr:.2f}")
             c3.metric("Carga Semanal", f"{int(aguda_serie.sum())}")
-            
             st.subheader("Gráfico Aguda vs Crónica")
             fig, ax = plt.subplots(figsize=(10, 4))
             ax.plot(aguda_serie.index, [aguda]*len(aguda_serie), color='red', linestyle='--', label="Aguda")
             ax.plot(cronica_serie.index, cronica_serie.values, color='cyan', alpha=0.5, label="Crónica")
             ax.fill_between(aguda_serie.index, aguda_serie.values, color='red', alpha=0.2)
-            ax.legend()
-            st.pyplot(fig)
+            ax.legend(); st.pyplot(fig)
 
     elif menu == "📥 Gestión de Datos":
         st.header("📥 Gestión de Datos")
@@ -256,32 +241,24 @@ if check_password():
             df['Fecha'] = pd.to_datetime(df['Fecha']).dt.date
             tipo_filtro = st.radio("Filtro:", ["Todo", "Esta Semana", "Mes Específico"], horizontal=True)
             df_filtrado = df.copy()
-            if tipo_filtro == "Esta Semana":
-                df_filtrado = df[df['Fecha'] >= (date.today() - timedelta(days=date.today().weekday()))]
+            if tipo_filtro == "Esta Semana": df_filtrado = df[df['Fecha'] >= (date.today() - timedelta(days=date.today().weekday()))]
             elif tipo_filtro == "Mes Específico":
                 meses = sorted(list(set(df['Fecha'].apply(lambda x: x.strftime('%Y-%m')))), reverse=True)
                 mes_sel = st.selectbox("Mes:", meses)
                 df_filtrado = df[df['Fecha'].apply(lambda x: x.strftime('%Y-%m')) == mes_sel]
-            
             csv = df_filtrado.to_csv(index=False).encode('utf-8')
             st.download_button(label="📥 Descargar", data=csv, file_name=f'datos_{USER}.csv')
-            
             with st.form("del_f"):
                 f_del = st.selectbox("Eliminar fecha:", sorted(df_filtrado['Fecha'].unique(), reverse=True))
                 conf = st.checkbox("Confirmar borrado")
                 if st.form_submit_button("Borrar Registro"):
-                    if conf:
-                        df[df['Fecha'] != f_del].to_csv(DB, index=False)
-                        st.rerun()
+                    if conf: df[df['Fecha'] != f_del].to_csv(DB, index=False); st.rerun()
             st.dataframe(df_filtrado.sort_values(by="Fecha", ascending=False))
 
     elif menu == "📖 Guía de Ayuda":
         st.header("📖 Guía de Interpretación de Datos")
-        
         with st.expander("🏅 Sistema de Medallas (Tu Compromiso)", expanded=True):
             st.write("""
-            **La disciplina y el compromiso diario son los pilares que sustentan tu rendimiento a largo plazo.** Este sistema premia tu rigor al registrar tus datos:
-            
             | Medalla | Racha Requerida | Significado |
             | :--- | :--- | :--- |
             | 🍫 **Chocolate** | **7 Días** | ¡Buen comienzo! Has superado la barrera de la primera semana. |
@@ -289,42 +266,10 @@ if check_password():
             | 🥈 **Plata** | **30 Días** | Compromiso de Élite. Un mes entero sin fallar denota mentalidad profesional. |
             | 🥇 **Oro** | **90 Días** | Disciplina de Tigre. Máximo nivel de rigor y seriedad con tu salud. |
             | 💎 **Diamante** | **180 Días** | Leyenda del Club. Referente absoluto de compromiso para todo el grupo. |
-            
-            *⚠️ **Importante:** La racha se mantiene simplemente registrando el Wellness. Si olvidas registrar tus datos un día entero, el contador volverá a cero.*
             """)
-
         with st.expander("🌅 Cuestionario Wellness (Método Hooper)"):
-            st.write("""
-            El **Wellness** indica tu capacidad de recuperación. Evaluamos 5 ítems de 1 a 5 (**5 es óptimo**, 1 es crítico):
-            
-            * **Calidad del Sueño:** Evalúa si el descanso ha sido reparador y profundo.
-            * **Nivel de Estrés:** Refleja la carga mental o tensiones externas al entrenamiento.
-            * **Fatiga Percibida:** Sensación general de cansancio o falta de energía.
-            * **Dolor Muscular (DOMS):** Presencia de agujetas o molestias musculares específicas.
-            * **Estado de Ánimo:** Tu predisposición psicológica y motivación para afrontar el día.
-            
-            *Mantener una media alta en estos valores asegura que estás asimilando bien el trabajo.*
-            """)
-            
+            st.write("El **Wellness** indica tu capacidad de recuperación (5 es óptimo, 1 es crítico).")
         with st.expander("📉 Monotonía (Variabilidad de la Carga)"):
-            st.write("""
-            Mide si tus cargas son muy similares día tras día. La variabilidad es necesaria para que el cuerpo progrese.
-            
-            * **Valores Óptimos (< 1.5):** Indica que hay buena alternancia entre días intensos y de recuperación.
-            * **Zona de Riesgo (1.5 - 2.0):** Empiezas a perder variabilidad; presta atención a tu descanso.
-            * **Alerta (> 2.0):** Monotonía alta. Esto puede generar sobreentrenamiento (por falta de descanso) o estancamiento (porque el cuerpo se acostumbra y deja de mejorar).
-            """)
-
+            st.write("Mide si tus cargas son muy similares día tras día.")
         with st.expander("⚖️ Ratio ACWR (Aguda vs Crónica)"):
-            st.write("""
-            Compara tu carga de la última semana contra tu media del mes para asegurar una progresión segura.
-            
-            * **Zona de Desentrenamiento (< 0.8):** Estás entrenando considerablemente menos de lo habitual. Puede haber riesgo de pérdida de forma o lesiones al reincorporar carga bruscamente.
-            * **Punto Dulce (0.8 - 1.3):** Carga de entrenamiento óptima. Progresión segura y mejora del rendimiento.
-            * **Zona de Peligro (> 1.5):** Riesgo crítico de lesión por exceso de carga.
-            
-            **Sistema de Semáforos:**
-            * 🟢 **Verde (0.8 - 1.3):** Todo en orden. ¡Sigue así!
-            * 🟡 **Amarillo (1.3 - 1.5 o 0.5 - 0.8):** Precaución. Estamos en el límite del desentrenamiento o de la fatiga excesiva.
-            * 🔴 **Rojo (< 0.5 o > 1.5):** Alerta máxima. Riesgo muy elevado de lesión o desajuste total.
-            """)
+            st.write("Compara tu carga de la última semana contra tu media del mes.")
