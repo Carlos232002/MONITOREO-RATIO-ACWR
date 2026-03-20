@@ -161,7 +161,6 @@ if check_password():
 
 elif menu == "🏆 Ranking del Grupo":
         st.header("🏆 Panel de Gestión de Rendimiento")
-        
         if "Staff" in GROUPS:
             st.subheader("🕵️‍♂️ Vista de Supervisor (Modo Coach Premium)")
             if GROUPS:
@@ -169,7 +168,6 @@ elif menu == "🏆 Ranking del Grupo":
                 res_maestro = []
                 hoy = date.today()
                 hace_7 = hoy - timedelta(days=7)
-
                 for u, info in USERS.items():
                     p_db = f'database_{u}.csv'
                     if g_sel in info[2] and os.path.exists(p_db) and "Staff" not in info[2]:
@@ -181,55 +179,33 @@ elif menu == "🏆 Ranking del Grupo":
                                 aguda = diario.reindex(pd.date_range(hoy-timedelta(days=6), hoy).date, fill_value=0).mean()
                                 cronica = diario.reindex(pd.date_range(hoy-timedelta(days=27), hoy).date, fill_value=0).mean()
                                 ratio = aguda / cronica if cronica > 0 else 1.0
-                                
                                 w_hoy = d[(d['Tipo'] == 'WELLNESS') & (d['Fecha'] == hoy)]
-                                # AQUÍ EL CAMBIO: Usamos 0 si no hay dato para que el gráfico no rompa
                                 well_score = w_hoy[['Sueno','Estres','Fatiga','Muscular','Animo']].mean(axis=1).values[0] if not w_hoy.empty else 0.0
                                 estado_reg = "Registrado ✅" if not w_hoy.empty else "PENDIENTE ⏳"
-                                
                                 if ratio > 1.5 or (0 < well_score < 2.5): alerta = "🔴 RIESGO ALTO"
                                 elif ratio > 1.3 or ratio < 0.8: alerta = "🟡 PRECAUCIÓN"
                                 else: alerta = "🟢 ÓPTIMO"
-
-                                res_maestro.append({
-                                    "Jugador": info[1],
-                                    "Wellness": float(well_score),
-                                    "Registro": estado_reg,
-                                    "Ratio ACWR": round(ratio, 2),
-                                    "Estado": alerta,
-                                    "Carga Semanal": int(diario.reindex(pd.date_range(hace_7, hoy).date, fill_value=0).sum())
-                                })
+                                res_maestro.append({"Jugador": info[1], "Wellness": float(well_score), "Registro": estado_reg, "Ratio ACWR": round(ratio, 2), "Estado": alerta, "Carga Semanal": int(diario.reindex(pd.date_range(hace_7, hoy).date, fill_value=0).sum())})
                         except: continue
-
                 if res_maestro:
                     df_maestro = pd.DataFrame(res_maestro)
-                    
                     c1, c2, c3 = st.columns(3)
                     c1.metric("En Riesgo", len(df_maestro[df_maestro['Estado'] == "🔴 RIESGO ALTO"]))
                     c2.metric("Pendientes", len(df_maestro[df_maestro['Registro'] == "PENDIENTE ⏳"]))
                     c3.metric("Media Carga", int(df_maestro['Carga Semanal'].mean()))
-
                     st.markdown("---")
-
-                    # Función de color corregida
                     def color_estado(val):
                         if val == "🔴 RIESGO ALTO": return 'background-color: #721c24'
                         if val == "🟡 PRECAUCIÓN": return 'background-color: #856404'
                         if val == "🟢 ÓPTIMO": return 'background-color: #155724'
                         return ''
-
-                    # TABLA MAESTRA CON ESTILOS BLINDADOS
-                    st.dataframe(
-                        df_maestro.style.applymap(color_estado, subset=['Estado'])
-                        .background_gradient(cmap='RdYlGn', subset=['Wellness'], vmin=1, vmax=5),
-                        use_container_width=True
-                    )
-                    
+                    st.dataframe(df_maestro.style.applymap(color_estado, subset=['Estado']).background_gradient(cmap='RdYlGn', subset=['Wellness'], vmin=1, vmax=5), use_container_width=True)
                     csv_maestro = df_maestro.to_csv(index=False).encode('utf-8')
                     st.download_button("📥 Descargar Reporte", csv_maestro, f"reporte_{hoy}.csv")
         else:
             st.subheader("📊 Ranking del Grupo")
             st.info("Registra tus datos para aparecer en la comparativa semanal.")
+
     elif menu == "📊 Mi Análisis Pro":
         st.header(f"📊 Panel Pro: {NAME}")
         df = pd.read_csv(DB)
@@ -242,12 +218,10 @@ elif menu == "🏆 Ranking del Grupo":
             aguda, cronica = aguda_serie.mean(), cronica_serie.mean()
             acwr = aguda / cronica if cronica > 0 else 1.0
             mono = aguda_serie.mean() / aguda_serie.std() if aguda_serie.std() > 0 else 0
-            
             c1, c2, c3 = st.columns(3)
             c1.metric("Monotonía", f"{mono:.2f}")
             c2.metric("Ratio ACWR", f"{acwr:.2f}")
             c3.metric("Carga Semanal", f"{int(aguda_serie.sum())}")
-            
             st.subheader("Gráfico Aguda vs Crónica")
             fig, ax = plt.subplots(figsize=(10, 4))
             ax.plot(aguda_serie.index, [aguda]*len(aguda_serie), color='red', linestyle='--', label="Aguda")
